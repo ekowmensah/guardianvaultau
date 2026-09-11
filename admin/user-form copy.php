@@ -58,21 +58,7 @@ try {
         if ($edit_mode && (int) ($_POST['edit_id'] ?? 0) !== $user_id) {
             throw new RuntimeException('Edit target mismatch.');
         }
-        $stepAliases = ['profile' => 'account', 'state' => 'item', 'review' => 'kin'];
-        $currentStep = $stepAliases[$_POST['current_step'] ?? 'account'] ?? ($_POST['current_step'] ?? 'account');
-        $requestedStep = $stepAliases[$_POST['next_step'] ?? 'account'] ?? ($_POST['next_step'] ?? 'account');
-        $allowedStepTargets = [
-            'account' => ['item'],
-            'item' => ['account', 'kin'],
-            'kin' => ['item', 'finish'],
-        ];
-        if (!in_array($currentStep, ['account', 'item', 'kin'], true)) {
-            $currentStep = 'account';
-        }
-        if (!in_array($requestedStep, $allowedStepTargets[$currentStep] ?? [], true)) {
-            $requestedStep = $currentStep;
-        }
-        $step = $requestedStep;
+        $step = ['profile' => 'account', 'state' => 'item', 'review' => 'kin'][$_POST['next_step'] ?? 'account'] ?? ($_POST['next_step'] ?? 'account');
         $is_finishing = ($step === 'finish');
         foreach ($_POST as $key => $value) {
             if ($key === 'next_step' || $key === 'edit_id' || $key === 'csrf_token') continue;
@@ -87,12 +73,13 @@ try {
             'item' => ['insurance_number', 'reference_code', 'transaction_code', 'box_dimension', 'deposited_item', 'package_type', 'package_quantity', 'total_weight', 'deposit_date', 'monthly_charges', 'amount_paid', 'quantity', 'current_gold_worth', 'price_per_kilogram', 'cost_of_safe_keeping', 'date_of_safe_keeping'],
             'kin' => ['name_of_beneficial', 'relation_with_user', 'date_of_birth', 'email_address', 'telephone_number_kin']
         ];
-        $validate_step = $currentStep;
+        $validate_step = ['profile' => 'account', 'state' => 'item', 'review' => 'kin', 'finish' => 'kin'][$_POST['current_step'] ?? $step] ?? ($_POST['current_step'] ?? $step);
         $is_going_back = false;
         $step_keys = array_keys($step_fields);
         if (isset($_POST['next_step'])) {
             $currentStepIndex = array_search($validate_step, $step_keys, true);
-            $nextStepIndex = array_search($requestedStep, $step_keys, true);
+            $nextStep = ['profile' => 'account', 'state' => 'item', 'review' => 'kin'][$_POST['next_step']] ?? $_POST['next_step'];
+            $nextStepIndex = array_search($nextStep, $step_keys, true);
             $is_going_back = $nextStepIndex !== false && $currentStepIndex !== false && $nextStepIndex < $currentStepIndex;
         }
         // Always validate all fields for the current step unless going back
@@ -367,11 +354,11 @@ try {
             } elseif (!$is_finishing) {
                 if ($is_going_back) {
                     // When going back, set $step to the previous step and do NOT redirect
-                    $step = $requestedStep;
+                    $step = $_POST['next_step'];
                     // Just fall through and re-render that step with session data
                 } else {
                     // When going forward and there are no errors, redirect to new step
-                    $step = $requestedStep;
+                    $step = $_POST['next_step'] ?? $step;
                     $editQuery = !empty($_POST['edit_id']) ? '&id=' . (int) $_POST['edit_id'] : '';
                     header("Location: user-form.php?step=$step$editQuery");
                     exit;
@@ -390,285 +377,36 @@ try {
 <?php $step = ['profile' => 'account', 'state' => 'item', 'review' => 'kin', 'finish' => 'kin'][$step] ?? $step; ?>
 <?php if (!in_array($step, ['account', 'item', 'kin'], true)) { $step = 'account'; } ?>
 <?php include 'admin_header.php'; ?>
-<style>
-    .gv-user-page {
-        --gv-primary: #2442d8;
-        --gv-ink: #172033;
-        --gv-muted: #667085;
-        --gv-line: #e6eaf2;
-        --gv-soft: #f8faff;
-        color: var(--gv-ink);
-    }
-
-    .gv-page-shell {
-        max-width: 1180px;
-    }
-
-    .gv-page-hero {
-        background: linear-gradient(135deg, #172033 0%, #2442d8 100%);
-        border: 0;
-        border-radius: 22px;
-        box-shadow: 0 18px 45px rgba(23, 32, 51, .18);
-        color: #fff;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .gv-page-hero::after {
-        background: radial-gradient(circle, rgba(255,255,255,.22), transparent 62%);
-        content: "";
-        height: 220px;
-        position: absolute;
-        right: -70px;
-        top: -90px;
-        width: 220px;
-    }
-
-    .gv-page-hero .btn {
-        position: relative;
-        z-index: 1;
-    }
-
-    .gv-stepper {
-        display: grid;
-        gap: .65rem;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .gv-stepper .nav-link {
-        align-items: center;
-        background: #fff;
-        border: 1px solid var(--gv-line);
-        border-radius: 14px;
-        color: var(--gv-muted);
-        display: flex;
-        gap: .65rem;
-        min-height: 58px;
-        padding: .65rem .8rem;
-    }
-
-    .gv-stepper .nav-link.active {
-        background: rgba(36, 66, 216, .08);
-        border-color: rgba(36, 66, 216, .32);
-        color: var(--gv-primary);
-        font-weight: 700;
-    }
-
-    .gv-step-number {
-        align-items: center;
-        background: #eef2ff;
-        border-radius: 999px;
-        display: inline-flex;
-        flex: 0 0 30px;
-        height: 30px;
-        justify-content: center;
-        width: 30px;
-    }
-
-    .gv-stepper .active .gv-step-number {
-        background: var(--gv-primary);
-        color: #fff;
-    }
-
-    .gv-form-card {
-        border: 1px solid var(--gv-line);
-        border-radius: 22px;
-        box-shadow: 0 14px 40px rgba(23, 32, 51, .08);
-    }
-
-    .gv-form-card .card-body {
-        padding: 1rem;
-    }
-
-    .gv-section-title {
-        align-items: center;
-        border-bottom: 1px solid var(--gv-line);
-        color: var(--gv-ink);
-        display: flex;
-        font-size: .88rem;
-        font-weight: 800;
-        gap: .55rem;
-        grid-column: 1 / -1;
-        letter-spacing: .03em;
-        margin: .35rem 0 .1rem;
-        padding: .25rem 0 .65rem;
-        text-transform: uppercase;
-    }
-
-    .gv-user-form {
-        display: grid;
-        gap: .8rem;
-        grid-template-columns: repeat(12, minmax(0, 1fr));
-    }
-
-    .gv-user-form > .mb-3 {
-        grid-column: span 6;
-        margin-bottom: 0 !important;
-    }
-
-    .gv-user-form > .alert,
-    .gv-user-form > .d-flex,
-    .gv-user-form > hr,
-    .gv-user-form > h5,
-    .gv-user-form > .gv-form-alert {
-        grid-column: 1 / -1;
-    }
-
-    .gv-user-form > .mb-3:has(textarea),
-    .gv-user-form > .mb-3:has(input[list]) {
-        grid-column: span 6;
-    }
-
-    .gv-user-form label {
-        color: #344054;
-        font-size: .78rem;
-        font-weight: 700;
-        margin-bottom: .32rem;
-    }
-
-    .gv-user-form .form-control,
-    .gv-user-form .form-select,
-    .gv-user-form .input-group-text {
-        border-color: #d9e0ec;
-        border-radius: 10px;
-        font-size: .92rem;
-        min-height: 40px;
-    }
-
-    .gv-user-form .input-group .form-control {
-        border-bottom-left-radius: 0;
-        border-top-left-radius: 0;
-    }
-
-    .gv-user-form textarea.form-control {
-        min-height: 82px;
-        resize: vertical;
-    }
-
-    .gv-user-form .form-text {
-        color: var(--gv-muted);
-        font-size: .75rem;
-    }
-
-    .gv-actions {
-        background: rgba(255,255,255,.92);
-        border-top: 1px solid var(--gv-line);
-        bottom: 0;
-        margin: .5rem -1rem -1rem;
-        padding: .9rem 1rem;
-        position: sticky;
-        z-index: 5;
-    }
-
-    .gv-summary {
-        background: var(--gv-soft);
-        border: 1px solid var(--gv-line);
-        border-radius: 18px;
-        padding: .95rem;
-    }
-
-    .gv-side-panel {
-        position: sticky;
-        top: 1rem;
-    }
-
-    .gv-summary-label {
-        color: var(--gv-muted);
-        font-size: .72rem;
-        font-weight: 700;
-        letter-spacing: .03em;
-        text-transform: uppercase;
-    }
-
-    .gv-summary-value {
-        font-size: .92rem;
-        font-weight: 700;
-        word-break: break-word;
-    }
-
-    @media (min-width: 1200px) {
-        .gv-user-form > .mb-3 {
-            grid-column: span 4;
-        }
-    }
-
-    @media (max-width: 767.98px) {
-        .gv-user-page.main-content {
-            padding: 1rem;
-        }
-
-        .gv-stepper,
-        .gv-user-form {
-            grid-template-columns: 1fr;
-        }
-
-        .gv-user-form > .mb-3 {
-            grid-column: 1 / -1;
-        }
-
-        .gv-side-panel {
-            position: static;
-        }
-    }
-</style>
-<main class="col-md-10 ms-sm-auto main-content gv-user-page">
+<main class="col-md-10 ms-sm-auto main-content">
 <div class="container-fluid">
-    <div class="gv-page-shell mx-auto">
-        <?php
-        $stepNumber = ['account' => 1, 'item' => 2, 'kin' => 3][$step] ?? 1;
-        $stepTitles = [
-            'account' => 'Account & Profile',
-            'item' => 'Deposit & Value',
-            'kin' => 'Beneficiary & Save',
-        ];
-        $stepDescriptions = [
-            'account' => 'Create the login identity and personal profile details.',
-            'item' => 'Capture the vault item, package, value, and safe-keeping data.',
-            'kin' => 'Add beneficiary contact details and complete the account.',
-        ];
-        $editSuffix = $edit_mode ? '&amp;id=' . (int) $user_id : '';
-        $summaryName = trim((string) (($_SESSION['user_form']['first_name'] ?? ($edit_mode ? ($edit_data['users']['first_name'] ?? '') : '')) . ' ' . ($_SESSION['user_form']['last_name'] ?? ($edit_mode ? ($edit_data['users']['last_name'] ?? '') : ''))));
-        $summaryUsername = $_SESSION['user_form']['username'] ?? ($edit_mode ? ($edit_data['users']['username'] ?? '') : ($generated['username'] ?? 'Pending'));
-        $summaryEmail = $_SESSION['user_form']['email'] ?? ($edit_mode ? ($edit_data['users']['email'] ?? '') : 'Not entered');
-        ?>
-        <div class="card gv-page-hero mb-3">
-            <div class="card-body p-3 p-lg-4">
-                <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3">
-                    <div class="flex-grow-1">
-                        <div class="small text-white-50 fw-semibold mb-1"><?= $edit_mode ? 'Edit client account' : 'New client account' ?></div>
-                        <h3 class="mb-1"><?= htmlspecialchars($stepTitles[$step], ENT_QUOTES, 'UTF-8') ?></h3>
-                        <p class="mb-0 text-white-50"><?= htmlspecialchars($stepDescriptions[$step], ENT_QUOTES, 'UTF-8') ?></p>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="badge rounded-pill bg-light text-dark px-3 py-2">Step <?= $stepNumber ?> of 3</span>
-                        <a href="user-list.php" class="btn btn-sm btn-outline-light"><i class="fa fa-times me-1"></i> Close</a>
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card shadow mt-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-grow-1">
+                            <?php $stepNumber = ['account' => 1, 'item' => 2, 'kin' => 3][$step] ?? 1; ?>
+                            <h4 class="mb-0">User Registration &mdash; Step <?= $stepNumber ?> of 3: <?= $stepNumber === 1 ? 'Account &amp; Profile' : ($stepNumber === 2 ? 'Deposit &amp; State' : 'Beneficiary &amp; Save') ?></h4>
+                        </div>
+                        <div style="width:200px">
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: <?= $stepNumber * 33.33 ?>%"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="progress mt-3 bg-white bg-opacity-25" style="height: 6px;">
-                    <div class="progress-bar bg-warning" role="progressbar" style="width: <?= $stepNumber * 33.33 ?>%"></div>
-                </div>
-            </div>
-        </div>
-        <div class="row g-3">
-            <div class="col-lg-8">
-                <div class="card gv-form-card">
-                    <div class="card-body">
-<ul class="nav gv-stepper mb-3" id="userFormSteps">
-    <li class="nav-item"><a class="nav-link<?= $step==='account'?' active':'' ?>" href="?step=account<?= $editSuffix ?>"><span class="gv-step-number">1</span><span>Account<br><small>Profile</small></span></a></li>
-        <li class="nav-item"><a class="nav-link<?= $step==='item'?' active':'' ?><?= ($edit_mode||$step==='item'||$step==='kin')?'':' disabled' ?>" href="?step=item<?= $editSuffix ?>"><span class="gv-step-number">2</span><span>Deposit<br><small>Value</small></span></a></li>
-        <li class="nav-item"><a class="nav-link<?= $step==='kin'?' active':'' ?><?= ($edit_mode||$step==='kin')?'':' disabled' ?>" href="?step=kin<?= $editSuffix ?>"><span class="gv-step-number">3</span><span>Beneficiary<br><small>Save</small></span></a></li>
+                <div class="card-body">
+<ul class="nav nav-pills mb-4" id="userFormSteps">
+    <?php $editSuffix = $edit_mode ? '&amp;id=' . (int) $user_id : ''; ?>
+    <li class="nav-item"><a class="nav-link<?= $step==='account'?' active':'' ?>" href="?step=account<?= $editSuffix ?>">1. Account &amp; Profile</a></li>
+        <li class="nav-item"><a class="nav-link<?= $step==='item'?' active':'' ?><?= ($step==='item'||$step==='kin')?'':' disabled' ?>" href="?step=item<?= $editSuffix ?>">2. Deposit &amp; State</a></li>
+        <li class="nav-item"><a class="nav-link<?= $step==='kin'?' active':'' ?><?= ($step==='kin')?'':' disabled' ?>" href="?step=kin<?= $editSuffix ?>">3. Beneficiary &amp; Save</a></li>
 </ul>
-<form method="post" autocomplete="off" class="gv-user-form">
+<form method="post" autocomplete="off">
     <input type="hidden" name="current_step" value="<?= htmlspecialchars($step) ?>">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
     <?php if ($edit_mode): ?>
         <input type="hidden" name="edit_id" value="<?= htmlspecialchars($user_id) ?>">
-    <?php endif; ?>
-    <?php if (!empty($errors)): ?>
-        <div class="alert alert-danger gv-form-alert mb-0">
-            <div class="fw-bold mb-1"><i class="fa fa-exclamation-triangle me-1"></i> Please check the details below.</div>
-            <div class="small"><?= count($errors) ?> field<?= count($errors) === 1 ? '' : 's' ?> need attention before you continue.</div>
-        </div>
     <?php endif; ?>
     <?php if (!empty(
         array_filter(array_intersect_key(
@@ -684,7 +422,6 @@ try {
 
     <?php endif; ?>
     <?php if ($step === 'account'): ?>
-        <h5 class="gv-section-title"><i class="fa fa-id-card text-primary"></i> Login & contact</h5>
         <div class="mb-3">
             <label class="form-label">Username (auto-generated)
     <?php if (!empty($errors['username'])): ?><span class="text-danger small ms-2"><?= $errors['username'] ?></span><?php endif; ?>
@@ -764,47 +501,22 @@ try {
                 <?php endforeach; ?>
             </select>
         </div>
-        <h5 class="gv-section-title"><i class="fa fa-user-circle text-primary"></i> Profile details</h5>
-        <div class="mb-3">
-            <label class="form-label">Nationality
-                <?php if (!empty($errors['nationality'])): ?><span class="text-danger small ms-2"><?= $errors['nationality'] ?></span><?php endif; ?>
-            </label>
-            <input type="text" name="nationality" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['nationality'] ?? ($edit_mode ? ($edit_data['userprofile']['nationality'] ?? '') : '')) ?>" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Married Status
-                <?php if (!empty($errors['married_status'])): ?><span class="text-danger small ms-2"><?= $errors['married_status'] ?></span><?php endif; ?>
-            </label>
-            <select name="married_status" class="form-select" required>
+        <hr><h5 class="mt-4">Profile Details</h5>
+        <div class="mb-3"><label class="form-label">Nationality</label><input type="text" name="nationality" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['nationality'] ?? ($edit_mode ? ($edit_data['userprofile']['nationality'] ?? '') : '')) ?>" required></div>
+        <div class="mb-3"><label class="form-label">Married Status</label><select name="married_status" class="form-select" required>
             <?php foreach (['Single', 'Married', 'Divorced'] as $status): ?><option value="<?= $status ?>" <?= (($_SESSION['user_form']['married_status'] ?? ($edit_mode ? ($edit_data['userprofile']['married_status'] ?? '') : '')) === $status) ? 'selected' : '' ?>><?= $status ?></option><?php endforeach; ?>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Has Child
-                <?php if (!empty($errors['has_child'])): ?><span class="text-danger small ms-2"><?= $errors['has_child'] ?></span><?php endif; ?>
-            </label>
-            <select name="has_child" class="form-select" required>
+        </select></div>
+        <div class="mb-3"><label class="form-label">Has Child</label><select name="has_child" class="form-select" required>
             <option value="No" <?= (($_SESSION['user_form']['has_child'] ?? ($edit_mode ? ($edit_data['userprofile']['has_child'] ?? '') : '')) === 'No') ? 'selected' : '' ?>>No</option>
             <option value="Yes" <?= (($_SESSION['user_form']['has_child'] ?? ($edit_mode ? ($edit_data['userprofile']['has_child'] ?? '') : '')) === 'Yes') ? 'selected' : '' ?>>Yes</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Child Name
-                <?php if (!empty($errors['child_name'])): ?><span class="text-danger small ms-2"><?= $errors['child_name'] ?></span><?php endif; ?>
-            </label>
-            <input type="text" name="child_name" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['child_name'] ?? ($edit_mode ? ($edit_data['userprofile']['child_name'] ?? '') : '')) ?>">
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Address
-                <?php if (!empty($errors['address'])): ?><span class="text-danger small ms-2"><?= $errors['address'] ?></span><?php endif; ?>
-            </label>
-            <textarea name="address" class="form-control" rows="2" required><?= htmlspecialchars($_SESSION['user_form']['address'] ?? ($edit_mode ? ($edit_data['userprofile']['address'] ?? '') : '')) ?></textarea>
-        </div>
-        <div class="d-flex justify-content-end gap-2 gv-actions">
+        </select></div>
+        <div class="mb-3"><label class="form-label">Child Name</label><input type="text" name="child_name" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['child_name'] ?? ($edit_mode ? ($edit_data['userprofile']['child_name'] ?? '') : '')) ?>"></div>
+        <div class="mb-3"><label class="form-label">Address</label><textarea name="address" class="form-control" rows="2" required><?= htmlspecialchars($_SESSION['user_form']['address'] ?? ($edit_mode ? ($edit_data['userprofile']['address'] ?? '') : '')) ?></textarea></div>
+        <div class="d-flex justify-content-end">
             <button type="submit" name="next_step" value="item" class="btn btn-primary">
                 Next <i class="fa fa-arrow-right ms-1"></i>
             </button>
-            <a href="user-list.php" class="btn btn-outline-secondary">Cancel</a>
+            <a href="user-list.php" class="btn btn-secondary ms-2">Cancel</a>
         </div>
     <?php elseif ($step === 'profile'): ?>
 
@@ -853,11 +565,11 @@ try {
             <button type="submit" name="next_step" value="account" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
             <button type="submit" name="next_step" value="item" class="btn btn-primary">Next <i class="fa fa-arrow-right ms-1"></i></button>
     <?php elseif ($step === 'item'): ?>
-        <div class="alert alert-info d-flex align-items-start gap-2 mb-0">
+        <div class="alert alert-info d-flex align-items-start gap-2 mb-4">
             <i class="fa fa-info-circle mt-1"></i>
             <div>Enter the physical deposit details first, then record its financial value and safe-keeping state below.</div>
         </div>
-        <h5 class="gv-section-title"><i class="fa fa-box-open text-primary"></i> Deposit details</h5>
+        <h5 class="border-bottom pb-2 mb-3"><i class="fa fa-box-open me-2 text-primary"></i>Deposit Details</h5>
         <div class="mb-3">
             <label class="form-label">Insurance Number
                 <?php if (!empty($errors['insurance_number'])): ?><span class="text-danger small ms-2"><?= $errors['insurance_number'] ?></span><?php endif; ?>
@@ -927,38 +639,13 @@ try {
             </label>
             <input type="number" name="amount_paid" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['amount_paid'] ?? ($edit_mode ? ($edit_data['item_details']['amount_paid'] ?? '') : '')) ?>" step="0.01" min="0" required>
         </div>
-        <h5 class="gv-section-title"><i class="fa fa-chart-line text-success"></i> Value &amp; safe-keeping</h5>
-        <div class="mb-3">
-            <label class="form-label">Quantity
-                <?php if (!empty($errors['quantity'])): ?><span class="text-danger small ms-2"><?= $errors['quantity'] ?></span><?php endif; ?>
-            </label>
-            <input type="number" name="quantity" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['quantity'] ?? ($edit_mode ? ($edit_data['state_of_items']['quantity'] ?? '') : '')) ?>" min="1" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Current Gold Worth
-                <?php if (!empty($errors['current_gold_worth'])): ?><span class="text-danger small ms-2"><?= $errors['current_gold_worth'] ?></span><?php endif; ?>
-            </label>
-            <div class="input-group"><span class="input-group-text">$</span><input type="number" name="current_gold_worth" class="form-control" inputmode="decimal" value="<?= htmlspecialchars($_SESSION['user_form']['current_gold_worth'] ?? ($edit_mode ? ($edit_data['state_of_items']['current_gold_worth'] ?? '') : '')) ?>" step="0.01" min="0" required></div>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Price Per Kilogram
-                <?php if (!empty($errors['price_per_kilogram'])): ?><span class="text-danger small ms-2"><?= $errors['price_per_kilogram'] ?></span><?php endif; ?>
-            </label>
-            <div class="input-group"><span class="input-group-text">$</span><input type="number" name="price_per_kilogram" class="form-control" inputmode="decimal" value="<?= htmlspecialchars($_SESSION['user_form']['price_per_kilogram'] ?? ($edit_mode ? ($edit_data['state_of_items']['price_per_kilogram'] ?? '') : '')) ?>" step="0.01" min="0" required></div>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Cost of Safe Keeping
-                <?php if (!empty($errors['cost_of_safe_keeping'])): ?><span class="text-danger small ms-2"><?= $errors['cost_of_safe_keeping'] ?></span><?php endif; ?>
-            </label>
-            <div class="input-group"><span class="input-group-text">$</span><input type="number" name="cost_of_safe_keeping" class="form-control" inputmode="decimal" value="<?= htmlspecialchars($_SESSION['user_form']['cost_of_safe_keeping'] ?? ($edit_mode ? ($edit_data['state_of_items']['cost_of_safe_keeping'] ?? '') : '')) ?>" step="0.01" min="0" required></div>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Date of Safe Keeping
-                <?php if (!empty($errors['date_of_safe_keeping'])): ?><span class="text-danger small ms-2"><?= $errors['date_of_safe_keeping'] ?></span><?php endif; ?>
-            </label>
-            <input type="date" name="date_of_safe_keeping" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['date_of_safe_keeping'] ?? ($edit_mode ? ($edit_data['state_of_items']['date_of_safe_keeping'] ?? '') : '')) ?>" required>
-        </div>
-        <div class="d-flex justify-content-between gap-2 gv-actions">
+        <hr><h5 class="mt-4 border-bottom pb-2"><i class="fa fa-chart-line me-2 text-success"></i>Value &amp; Safe-Keeping State</h5>
+        <div class="mb-3"><label class="form-label">Quantity</label><input type="number" name="quantity" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['quantity'] ?? ($edit_mode ? ($edit_data['state_of_items']['quantity'] ?? '') : '')) ?>" min="1" required></div>
+        <div class="mb-3"><label class="form-label">Current Gold Worth</label><div class="input-group"><span class="input-group-text">$</span><input type="number" name="current_gold_worth" class="form-control" inputmode="decimal" value="<?= htmlspecialchars($_SESSION['user_form']['current_gold_worth'] ?? ($edit_mode ? ($edit_data['state_of_items']['current_gold_worth'] ?? '') : '')) ?>" step="0.01" min="0" required></div></div>
+        <div class="mb-3"><label class="form-label">Price Per Kilogram</label><div class="input-group"><span class="input-group-text">$</span><input type="number" name="price_per_kilogram" class="form-control" inputmode="decimal" value="<?= htmlspecialchars($_SESSION['user_form']['price_per_kilogram'] ?? ($edit_mode ? ($edit_data['state_of_items']['price_per_kilogram'] ?? '') : '')) ?>" step="0.01" min="0" required></div></div>
+        <div class="mb-3"><label class="form-label">Cost of Safe Keeping</label><div class="input-group"><span class="input-group-text">$</span><input type="number" name="cost_of_safe_keeping" class="form-control" inputmode="decimal" value="<?= htmlspecialchars($_SESSION['user_form']['cost_of_safe_keeping'] ?? ($edit_mode ? ($edit_data['state_of_items']['cost_of_safe_keeping'] ?? '') : '')) ?>" step="0.01" min="0" required></div></div>
+        <div class="mb-3"><label class="form-label">Date of Safe Keeping</label><input type="date" name="date_of_safe_keeping" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['date_of_safe_keeping'] ?? ($edit_mode ? ($edit_data['state_of_items']['date_of_safe_keeping'] ?? '') : '')) ?>" required></div>
+        <div class="d-flex justify-content-between">
             <button type="submit" name="next_step" value="account" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
             <button type="submit" name="next_step" value="kin" class="btn btn-primary">Next <i class="fa fa-arrow-right ms-1"></i></button>
         </div>
@@ -998,7 +685,6 @@ try {
             <button type="submit" name="next_step" value="kin" class="btn btn-primary">Next <i class="fa fa-arrow-right ms-1"></i></button>
         </div>
     <?php elseif ($step === 'kin'): ?>
-        <h5 class="gv-section-title"><i class="fa fa-user-friends text-primary"></i> Beneficiary contact</h5>
         <div class="mb-3">
             <label class="form-label">Full Name
                 <?php if (!empty($errors['name_of_beneficial'])): ?><span class="text-danger small ms-2"><?= $errors['name_of_beneficial'] ?></span><?php endif; ?>
@@ -1029,7 +715,7 @@ try {
             </label>
             <input type="text" name="telephone_number_kin" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['telephone_number_kin'] ?? ($edit_mode ? ($edit_data['next_of_kin']['telephone_number_kin'] ?? '') : '')) ?>" required>
         </div>
-        <div class="d-flex justify-content-between gap-2 gv-actions">
+        <div class="d-flex justify-content-between">
             <button type="submit" name="next_step" value="item" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
             <button type="submit" name="next_step" value="finish" class="btn btn-success">Save Account <i class="fa fa-check ms-1"></i></button>
         </div>
@@ -1061,58 +747,12 @@ try {
             <button type="submit" name="next_step" value="kin" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
             <button type="submit" name="next_step" value="finish" class="btn btn-success">Save Account <i class="fa fa-check ms-1"></i></button>
         </div>
-<?php endif; ?>
+    <?php endif; ?>
 </form>
-                    </div>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <aside class="gv-side-panel">
-                    <div class="gv-summary mb-3">
-                        <div class="gv-summary-label mb-1">Current record</div>
-                        <div class="gv-summary-value"><?= htmlspecialchars($summaryName !== '' ? $summaryName : 'Name not entered', ENT_QUOTES, 'UTF-8') ?></div>
-                        <div class="small text-muted mt-1"><?= htmlspecialchars((string) $summaryUsername, ENT_QUOTES, 'UTF-8') ?></div>
-                        <div class="small text-muted"><?= htmlspecialchars((string) $summaryEmail, ENT_QUOTES, 'UTF-8') ?></div>
-                    </div>
-                    <div class="gv-summary">
-                        <div class="gv-summary-label mb-2">Quick guide</div>
-                        <div class="d-flex gap-2 mb-2">
-                            <i class="fa fa-check-circle text-success mt-1"></i>
-                            <div class="small">Use the step cards to review completed sections.</div>
-                        </div>
-                        <div class="d-flex gap-2 mb-2">
-                            <i class="fa fa-lock text-primary mt-1"></i>
-                            <div class="small">Generated account codes are kept visible for easy copying.</div>
-                        </div>
-                        <div class="d-flex gap-2">
-                            <i class="fa fa-save text-warning mt-1"></i>
-                            <div class="small">Nothing is saved permanently until the final Save Account button.</div>
-                        </div>
-                    </div>
-                </aside>
+</div>
             </div>
         </div>
     </div>
 </div>
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    var hasChild = document.querySelector('select[name="has_child"]');
-    var childName = document.querySelector('input[name="child_name"]');
-    var childGroup = childName ? childName.closest('.mb-3') : null;
-
-    function syncChildField() {
-        if (!hasChild || !childName || !childGroup) return;
-        var show = hasChild.value === 'Yes';
-        childGroup.classList.toggle('d-none', !show);
-        childName.required = show;
-        if (!show) childName.value = '';
-    }
-
-    if (hasChild) {
-        hasChild.addEventListener('change', syncChildField);
-        syncChildField();
-    }
-});
-</script>
 </main>
 <?php include 'admin_footer.php'; ?>

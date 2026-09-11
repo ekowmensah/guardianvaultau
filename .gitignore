@@ -1,1 +1,4 @@
 guardvaultau_vault.sql
+database/data_users_accounts_admins_only.sql
+database/live_upload_users_accounts_admins.sql
+database/replace_users_accounts_admins_only.sql
