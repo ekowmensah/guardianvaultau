@@ -9,8 +9,8 @@ $user = isset($_SESSION['user']) ? $_SESSION['user'] : null;
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Client Portal - Guardian Vault</title>
-    <link href="assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
+    <link href="<?= htmlspecialchars(asset_url('assets/bootstrap/css/bootstrap.min.css'), ENT_QUOTES, 'UTF-8') ?>" rel="stylesheet">
+    <link rel="stylesheet" href="<?= htmlspecialchars(asset_url('assets/fonts/fontawesome-all.min.css'), ENT_QUOTES, 'UTF-8') ?>">
     <style>
         body { background: #f8fafc; }
         .sidebar {

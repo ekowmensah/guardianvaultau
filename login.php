@@ -24,8 +24,8 @@ $message = ($_GET['message'] ?? '') === 'password-changed' ? 'Your password was 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | Guardian Vault</title>
     <link rel="icon" type="image/png" href="assets/img/thelogseclogo.png">
-    <link href="assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/fonts/fontawesome-all.min.css">
+    <link href="<?= htmlspecialchars(asset_url('assets/bootstrap/css/bootstrap.min.css'), ENT_QUOTES, 'UTF-8') ?>" rel="stylesheet">
+    <link rel="stylesheet" href="<?= htmlspecialchars(asset_url('assets/fonts/fontawesome-all.min.css'), ENT_QUOTES, 'UTF-8') ?>">
     <style>
         body {
             background: linear-gradient(120deg, #f8fafc 0%, #f1f5f9 100%);
@@ -99,6 +99,6 @@ $message = ($_GET['message'] ?? '') === 'password-changed' ? 'Your password was 
             </div>
         </div>
     </div>
-    <script src="assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="<?= htmlspecialchars(asset_url('assets/bootstrap/js/bootstrap.min.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 </body>
 </html>

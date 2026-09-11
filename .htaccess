@@ -6,7 +6,7 @@ ServerSignature Off
     Require all denied
 </FilesMatch>
 
-<FilesMatch "^(app_security|db_conn|user_header|user_footer)\.php$">
+<FilesMatch "^(app_security|app_config|config|config\.example|db_conn|user_header|user_footer)\.php$">
     Require all denied
 </FilesMatch>
 

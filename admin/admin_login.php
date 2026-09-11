@@ -13,6 +13,7 @@ $errorMessages = [
     'mfa-required' => 'Complete multi-factor authentication to continue.',
 ];
 $error = $errorMessages[$_GET['error'] ?? ''] ?? '';
+$message = ($_GET['message'] ?? '') === 'initial-admin-created' ? 'Initial administrator created. Sign in to continue.' : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -21,8 +22,8 @@ $error = $errorMessages[$_GET['error'] ?? ''] ?? '';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login | Guardian Vault</title>
     <link rel="icon" type="image/png" href="../assets/img/thelogseclogo.png">
-    <link href="../assets/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/fonts/fontawesome-all.min.css">
+    <link href="../<?= htmlspecialchars(asset_url('assets/bootstrap/css/bootstrap.min.css'), ENT_QUOTES, 'UTF-8') ?>" rel="stylesheet">
+    <link rel="stylesheet" href="../<?= htmlspecialchars(asset_url('assets/fonts/fontawesome-all.min.css'), ENT_QUOTES, 'UTF-8') ?>">
     <style>
         body {
             background: linear-gradient(120deg, #f8fafc 0%, #f1f5f9 100%);
@@ -71,6 +72,9 @@ $error = $errorMessages[$_GET['error'] ?? ''] ?? '';
                 <?php if ($error): ?>
                     <div class="alert alert-danger text-center"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
+                <?php if ($message): ?>
+                    <div class="alert alert-success text-center"><?= htmlspecialchars($message, ENT_QUOTES, 'UTF-8') ?></div>
+                <?php endif; ?>
                 <form action="admin_login_process.php" method="post" autocomplete="off">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
                     <div class="mb-3">
@@ -86,6 +90,6 @@ $error = $errorMessages[$_GET['error'] ?? ''] ?? '';
             </div>
         </div>
     </div>
-    <script src="../assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="../<?= htmlspecialchars(asset_url('assets/bootstrap/js/bootstrap.min.js'), ENT_QUOTES, 'UTF-8') ?>"></script>
 </body>
 </html>

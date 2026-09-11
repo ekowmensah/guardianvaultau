@@ -57,5 +57,5 @@ if (!empty($admin['totp_secret'])) {
 
 establish_admin_session($admin, false);
 log_security_event('admin', 'login_succeeded', (int) $admin['id'], (int) $admin['id'], 'Password authentication; MFA not enrolled');
-header('Location: ' . (getenv('GUARDIAN_ADMIN_MFA_REQUIRED') === '1' ? 'mfa-setup.php?required=1' : 'index.php'));
+header('Location: ' . ((string) guardian_config_value('GUARDIAN_ADMIN_MFA_REQUIRED', '0') === '1' ? 'mfa-setup.php?required=1' : 'index.php'));
 exit;

@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/app_config.php';
+
 function db_connection(): PDO
 {
     static $connection = null;
@@ -8,12 +10,12 @@ function db_connection(): PDO
         return $connection;
     }
 
-    $dbHost = (string) (getenv('GUARDIAN_DB_HOST') ?: 'localhost');
-    $dbPort = (int) (getenv('GUARDIAN_DB_PORT') ?: 3306);
-    $dbName = (string) (getenv('GUARDIAN_DB_NAME') ?: 'guardianvaultau');
-    $configuredUser = getenv('GUARDIAN_DB_USER');
-    $configuredPassword = getenv('GUARDIAN_DB_PASSWORD');
-    $environment = strtolower((string) (getenv('GUARDIAN_APP_ENV') ?: 'local'));
+    $dbHost = (string) guardian_config_value('GUARDIAN_DB_HOST', 'localhost');
+    $dbPort = (int) guardian_config_value('GUARDIAN_DB_PORT', 3306);
+    $dbName = (string) guardian_config_value('GUARDIAN_DB_NAME', 'guardianvaultau');
+    $configuredUser = guardian_config_value('GUARDIAN_DB_USER');
+    $configuredPassword = guardian_config_value('GUARDIAN_DB_PASSWORD');
+    $environment = strtolower((string) guardian_config_value('GUARDIAN_APP_ENV', 'local'));
     $isLocalRequest = PHP_SAPI === 'cli' || in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
 
     if ($environment === 'production' && (!$configuredUser || $configuredPassword === false || $configuredPassword === '')) {

@@ -11,7 +11,22 @@ Guardian Vault is a PHP 8.2 and MariaDB customer/admin portal for managing safeg
 
 ## Configuration
 
-Set the variables documented in `.env.example` through the web server or secret manager. The application permits the XAMPP `root`/blank-password defaults only when the request is local and `GUARDIAN_APP_ENV` is not `production`.
+Set the variables documented in `.env.example` through the web server or secret manager. On shared cPanel hosting, copy `config.example.php` to `config.php` and fill in the cPanel database name, database user, password, and a long random `GUARDIAN_APP_KEY`.
+
+The application permits the XAMPP `root`/blank-password defaults only when the request is local and `GUARDIAN_APP_ENV` is not `production`.
+
+## cPanel Deployment
+
+1. Create a MySQL database and database user in cPanel, then grant that user all privileges on the database.
+2. Import `database/schema.sql` with phpMyAdmin for a fresh install. Do not import `guardianvaultau.sql` unless you intentionally want the local sample/data dump.
+3. Copy `config.example.php` to `config.php` in the web root and update the `GUARDIAN_DB_*` values to match cPanel.
+4. Set the site to PHP 8.2+ and make sure PDO MySQL is enabled.
+5. Upload the whole project, including `assets/`, `font/`, `fpdf.php`, `.htaccess`, `.user.ini`, and `database/schema.sql`.
+6. Visit `/setup-admin.php` to create the first administrator. The setup page stops working automatically after the first admin account exists.
+7. Sign in at `/admin/admin_login.php`.
+
+Changed PHP pages send no-store headers, and CSS/JS assets include file-version query strings so cPanel/browser caches do not keep serving old page styling after upload.
+If cPanel still shows old PHP after upload, use cPanel's "Restart PHP-FPM" or "MultiPHP Manager" reload option for the domain.
 
 ## Database
 

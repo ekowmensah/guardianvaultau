@@ -1,16 +1,18 @@
 <?php
 declare(strict_types=1);
 
-date_default_timezone_set((string) (getenv('GUARDIAN_TIMEZONE') ?: 'Australia/Sydney'));
+require_once __DIR__ . '/app_config.php';
+
+date_default_timezone_set((string) guardian_config_value('GUARDIAN_TIMEZONE', 'Australia/Sydney'));
 
 function app_environment(): string
 {
-    return strtolower((string) (getenv('GUARDIAN_APP_ENV') ?: 'local'));
+    return strtolower((string) guardian_config_value('GUARDIAN_APP_ENV', 'local'));
 }
 
 function app_key(): string
 {
-    $key = (string) (getenv('GUARDIAN_APP_KEY') ?: '');
+    $key = (string) guardian_config_value('GUARDIAN_APP_KEY', '');
     if ($key !== '') {
         return $key;
     }
@@ -100,7 +102,7 @@ function request_is_https(): bool
     if (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') {
         return true;
     }
-    return getenv('GUARDIAN_TRUST_PROXY') === '1'
+    return (string) guardian_config_value('GUARDIAN_TRUST_PROXY', '0') === '1'
         && strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
 }
 
@@ -119,6 +121,8 @@ function send_security_headers(): void
     header('Referrer-Policy: no-referrer');
     header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
     header("Content-Security-Policy: default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'");
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
     if (request_is_https()) {
         header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
     }
@@ -172,8 +176,16 @@ function client_ip(): string
 
 function configured_positive_int(string $name, int $default): int
 {
-    $value = filter_var(getenv($name), FILTER_VALIDATE_INT);
+    $value = filter_var(guardian_config_value($name), FILTER_VALIDATE_INT);
     return $value && $value > 0 ? $value : $default;
+}
+
+function asset_url(string $path): string
+{
+    $cleanPath = ltrim($path, '/');
+    $file = __DIR__ . '/' . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $cleanPath);
+    $version = is_file($file) ? (string) filemtime($file) : (string) time();
+    return $cleanPath . '?v=' . rawurlencode($version);
 }
 
 function enforce_session_lifetime(string $loginLocation): void
@@ -271,7 +283,7 @@ function require_admin(): void
         header('Location: admin_login.php?error=mfa-required');
         exit;
     }
-    if (getenv('GUARDIAN_ADMIN_MFA_REQUIRED') === '1' && empty($admin['totp_secret']) && !in_array($currentPage, ['mfa-setup.php', 'logout.php'], true)) {
+    if ((string) guardian_config_value('GUARDIAN_ADMIN_MFA_REQUIRED', '0') === '1' && empty($admin['totp_secret']) && !in_array($currentPage, ['mfa-setup.php', 'logout.php'], true)) {
         header('Location: mfa-setup.php?required=1');
         exit;
     }
