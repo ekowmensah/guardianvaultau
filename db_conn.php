@@ -59,4 +59,5 @@ function db_connection(): PDO
     }
 }
 
-$pdo = db_connection();
+$GLOBALS['pdo'] = db_connection();
+$pdo = $GLOBALS['pdo'];
