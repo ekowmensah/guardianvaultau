@@ -58,9 +58,8 @@ try {
         if ($edit_mode && (int) ($_POST['edit_id'] ?? 0) !== $user_id) {
             throw new RuntimeException('Edit target mismatch.');
         }
-        $stepAliases = ['profile' => 'account', 'state' => 'item', 'review' => 'kin'];
-        $currentStep = $stepAliases[$_POST['current_step'] ?? 'account'] ?? ($_POST['current_step'] ?? 'account');
-        $requestedStep = $stepAliases[$_POST['next_step'] ?? 'account'] ?? ($_POST['next_step'] ?? 'account');
+        $currentStep = $_POST['current_step'] ?? 'account';
+        $requestedStep = $_POST['next_step'] ?? 'account';
         $allowedStepTargets = [
             'account' => ['item'],
             'item' => ['account', 'kin'],
@@ -363,7 +362,7 @@ try {
             // If errors, do not redirect; show errors on the relevant grouped step.
             if (!empty($errors) && !$is_finishing) {
                 // Stay on the current step and show errors
-                $step = $_POST['current_step'] ?? $step;
+                $step = $currentStep;
             } elseif (!$is_finishing) {
                 if ($is_going_back) {
                     // When going back, set $step to the previous step and do NOT redirect
@@ -387,7 +386,6 @@ try {
 }
 ?>
 <?php if (!isset($step)) { $step = $_GET['step'] ?? 'account'; } ?>
-<?php $step = ['profile' => 'account', 'state' => 'item', 'review' => 'kin', 'finish' => 'kin'][$step] ?? $step; ?>
 <?php if (!in_array($step, ['account', 'item', 'kin'], true)) { $step = 'account'; } ?>
 <?php include 'admin_header.php'; ?>
 <style>
@@ -806,52 +804,6 @@ try {
             </button>
             <a href="user-list.php" class="btn btn-outline-secondary">Cancel</a>
         </div>
-    <?php elseif ($step === 'profile'): ?>
-
-        <div class="mb-3">
-            <label class="form-label">Nationality
-    <?php if (!empty($errors['nationality'])): ?><span class="text-danger small ms-2"><?= $errors['nationality'] ?></span><?php endif; ?>
-</label>
-            <input type="text" name="nationality" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['nationality'] ?? ($edit_mode ? ($edit_data['userprofile']['nationality'] ?? '') : '')) ?>" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Married Status
-    <?php if (!empty($errors['married_status'])): ?><span class="text-danger small ms-2"><?= $errors['married_status'] ?></span><?php endif; ?>
-</label>
-            <select name="married_status" class="form-select" required>
-                <option value="Single" <?= (($_SESSION['user_form']['married_status'] ?? ($edit_mode ? ($edit_data['userprofile']['married_status'] ?? '') : '')) === 'Single') ? 'selected' : '' ?>>Single</option>
-                <option value="Married" <?= (($_SESSION['user_form']['married_status'] ?? ($edit_mode ? ($edit_data['userprofile']['married_status'] ?? '') : '')) === 'Married') ? 'selected' : '' ?>>Married</option>
-
-
-                <option value="Divorced" <?= (($_SESSION['user_form']['married_status'] ?? ($edit_mode ? ($edit_data['userprofile']['married_status'] ?? '') : '')) === 'Divorced') ? 'selected' : '' ?>>Divorced</option>
-
-
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Has Child
-    <?php if (!empty($errors['has_child'])): ?><span class="text-danger small ms-2"><?= $errors['has_child'] ?></span><?php endif; ?>
-</label>
-            <select name="has_child" class="form-select" required>
-                <option value="No" <?= (($_SESSION['user_form']['has_child'] ?? ($edit_mode ? ($edit_data['userprofile']['has_child'] ?? '') : '')) === 'No') ? 'selected' : '' ?>>No</option>
-                <option value="Yes" <?= (($_SESSION['user_form']['has_child'] ?? ($edit_mode ? ($edit_data['userprofile']['has_child'] ?? '') : '')) === 'Yes') ? 'selected' : '' ?>>Yes</option>
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Child Name
-    <?php if (!empty($errors['child_name'])): ?><span class="text-danger small ms-2"><?= $errors['child_name'] ?></span><?php endif; ?>
-</label>
-            <input type="text" name="child_name" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['child_name'] ?? ($edit_mode ? ($edit_data['userprofile']['child_name'] ?? '') : '')) ?>" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Address
-    <?php if (!empty($errors['address'])): ?><span class="text-danger small ms-2"><?= $errors['address'] ?></span><?php endif; ?>
-</label>
-            <textarea name="address" class="form-control" rows="2" required><?= htmlspecialchars($_SESSION['user_form']['address'] ?? ($edit_mode ? ($edit_data['userprofile']['address'] ?? '') : '')) ?></textarea>
-        </div>
-        <div class="d-flex justify-content-between">
-            <button type="submit" name="next_step" value="account" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
-            <button type="submit" name="next_step" value="item" class="btn btn-primary">Next <i class="fa fa-arrow-right ms-1"></i></button>
     <?php elseif ($step === 'item'): ?>
         <div class="alert alert-info d-flex align-items-start gap-2 mb-0">
             <i class="fa fa-info-circle mt-1"></i>
@@ -962,41 +914,6 @@ try {
             <button type="submit" name="next_step" value="account" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
             <button type="submit" name="next_step" value="kin" class="btn btn-primary">Next <i class="fa fa-arrow-right ms-1"></i></button>
         </div>
-    <?php elseif ($step === 'state'): ?>
-        <div class="mb-3">
-            <label class="form-label">Quantity
-                <?php if (!empty($errors['quantity'])): ?><span class="text-danger small ms-2"><?= $errors['quantity'] ?></span><?php endif; ?>
-            </label>
-            <input type="number" name="quantity" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['quantity'] ?? ($edit_mode ? ($edit_data['state_of_items']['quantity'] ?? '') : '')) ?>" min="1" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Current Gold Worth
-                <?php if (!empty($errors['current_gold_worth'])): ?><span class="text-danger small ms-2"><?= $errors['current_gold_worth'] ?></span><?php endif; ?>
-            </label>
-            <input type="number" name="current_gold_worth" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['current_gold_worth'] ?? ($edit_mode ? ($edit_data['state_of_items']['current_gold_worth'] ?? '') : '')) ?>" step="0.01" min="0" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Price Per Kilogram
-                <?php if (!empty($errors['price_per_kilogram'])): ?><span class="text-danger small ms-2"><?= $errors['price_per_kilogram'] ?></span><?php endif; ?>
-            </label>
-            <input type="number" name="price_per_kilogram" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['price_per_kilogram'] ?? ($edit_mode ? ($edit_data['state_of_items']['price_per_kilogram'] ?? '') : '')) ?>" step="0.01" min="0" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Cost of Safe Keeping
-                <?php if (!empty($errors['cost_of_safe_keeping'])): ?><span class="text-danger small ms-2"><?= $errors['cost_of_safe_keeping'] ?></span><?php endif; ?>
-            </label>
-            <input type="number" name="cost_of_safe_keeping" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['cost_of_safe_keeping'] ?? ($edit_mode ? ($edit_data['state_of_items']['cost_of_safe_keeping'] ?? '') : '')) ?>" step="0.01" min="0" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Date of Safe Keeping
-                <?php if (!empty($errors['date_of_safe_keeping'])): ?><span class="text-danger small ms-2"><?= $errors['date_of_safe_keeping'] ?></span><?php endif; ?>
-            </label>
-            <input type="date" name="date_of_safe_keeping" class="form-control" value="<?= htmlspecialchars($_SESSION['user_form']['date_of_safe_keeping'] ?? ($edit_mode ? ($edit_data['state_of_items']['date_of_safe_keeping'] ?? '') : '')) ?>" required>
-        </div>
-        <div class="d-flex justify-content-between">
-            <button type="submit" name="next_step" value="item" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
-            <button type="submit" name="next_step" value="kin" class="btn btn-primary">Next <i class="fa fa-arrow-right ms-1"></i></button>
-        </div>
     <?php elseif ($step === 'kin'): ?>
         <h5 class="gv-section-title"><i class="fa fa-user-friends text-primary"></i> Beneficiary contact</h5>
         <div class="mb-3">
@@ -1031,34 +948,6 @@ try {
         </div>
         <div class="d-flex justify-content-between gap-2 gv-actions">
             <button type="submit" name="next_step" value="item" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
-            <button type="submit" name="next_step" value="finish" class="btn btn-success">Save Account <i class="fa fa-check ms-1"></i></button>
-        </div>
-    <?php elseif ($step === 'review'): ?>
-        <h5 class="mb-3">Review Account Details</h5>
-        <p class="text-muted">Confirm the information below before saving this account.</p>
-        <div class="table-responsive mb-4">
-            <table class="table table-bordered align-middle">
-                <tbody>
-                <?php foreach ([
-                    'username' => 'Username', 'first_name' => 'First Name', 'last_name' => 'Last Name', 'email' => 'Email',
-                    'telephone_number' => 'Telephone', 'role' => 'Role', 'status' => 'Account Status', 'nationality' => 'Nationality',
-                    'married_status' => 'Married Status', 'has_child' => 'Has Child', 'child_name' => 'Child Name',
-                    'address' => 'Address', 'insurance_number' => 'Insurance Number', 'reference_code' => 'Reference Code',
-                    'transaction_code' => 'Transaction Code', 'deposited_item' => 'Deposited Item', 'package_quantity' => 'Package Quantity',
-                    'total_weight' => 'Total Weight', 'deposit_date' => 'Deposit Date', 'monthly_charges' => 'Monthly Charges',
-                    'amount_paid' => 'Amount Paid', 'quantity' => 'Quantity', 'current_gold_worth' => 'Current Gold Worth',
-                    'price_per_kilogram' => 'Price Per Kilogram', 'cost_of_safe_keeping' => 'Cost of Safe Keeping',
-                    'date_of_safe_keeping' => 'Date of Safe Keeping', 'name_of_beneficial' => 'Beneficiary',
-                    'relation_with_user' => 'Relationship', 'date_of_birth' => 'Beneficiary Date of Birth',
-                    'email_address' => 'Beneficiary Email', 'telephone_number_kin' => 'Beneficiary Telephone'
-                ] as $field => $label): ?>
-                    <tr><th><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></th><td><?= htmlspecialchars((string) ($_SESSION['user_form'][$field] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td></tr>
-                <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-        <div class="d-flex justify-content-between">
-            <button type="submit" name="next_step" value="kin" class="btn btn-secondary"><i class="fa fa-arrow-left me-1"></i>Back</button>
             <button type="submit" name="next_step" value="finish" class="btn btn-success">Save Account <i class="fa fa-check ms-1"></i></button>
         </div>
 <?php endif; ?>
