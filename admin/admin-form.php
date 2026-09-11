@@ -29,8 +29,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($username === '' || strlen($username) > 100) $errors[] = 'Enter a username of at most 100 characters.';
     if (!in_array($role, ['super_admin', 'operator', 'auditor'], true)) $errors[] = 'Choose a valid administrator role.';
     if (!in_array($status, ['Active', 'Suspended'], true)) $errors[] = 'Choose a valid status.';
-    if (empty($_POST['id']) && strlen($password) < 12) $errors[] = 'Password must be at least 12 characters.';
-    if ($password !== '' && strlen($password) < 12) $errors[] = 'Password must be at least 12 characters.';
+    if (empty($_POST['id']) && strlen($password) < 8) $errors[] = 'Password must be at least 8 characters.';
+    if ($password !== '' && strlen($password) < 8) $errors[] = 'Password must be at least 8 characters.';
     $duplicate = $pdo->prepare('SELECT COUNT(*) FROM admin_users WHERE username = ? AND id <> ?');
     $duplicate->execute([$username, (int) ($_POST['id'] ?? 0)]);
     if ((int) $duplicate->fetchColumn() > 0) $errors[] = 'That username is already in use.';
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="mb-3">
             <label class="form-label"><?= $edit ? 'New ' : '' ?>Password</label>
-            <input type="password" name="password" class="form-control" minlength="12" autocomplete="new-password" <?= $edit ? '' : 'required' ?>>
+            <input type="password" name="password" class="form-control" minlength="8" autocomplete="new-password" <?= $edit ? '' : 'required' ?>>
         </div>
         <div class="mb-3"><label class="form-label">Role</label><select name="role" class="form-select" required>
             <?php foreach (['super_admin' => 'Super administrator', 'operator' => 'Operator', 'auditor' => 'Auditor'] as $value => $label): ?><option value="<?= $value ?>" <?= $role === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?>

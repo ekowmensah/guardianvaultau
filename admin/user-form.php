@@ -185,8 +185,8 @@ function gv_validate_steps(PDO $pdo, array $steps, bool $editMode, ?int $editId)
             if ($field === 'password') {
                 if (empty($data['password_hash'])) {
                     $errors['password'] = 'Password is required.';
-                } elseif ((int) ($data['_last_password_length'] ?? 0) < 12) {
-                    $errors['password'] = 'Password must be at least 12 characters.';
+                } elseif ((int) ($data['_last_password_length'] ?? 0) < 8) {
+                    $errors['password'] = 'Password must be at least 8 characters.';
                     unset($_SESSION['user_form']['password_hash']);
                 }
                 continue;
@@ -508,7 +508,7 @@ include __DIR__ . '/admin_header.php';
                                 <?php if ($step === 'account'): ?>
                                     <h5 class="gv-section-title"><i class="fa fa-id-card text-primary"></i> Account profile</h5>
                                     <div class="gv-field"><label class="form-label">Account Number <?= gv_error($errors, 'username') ?></label><input type="text" name="username" class="form-control" value="<?= gv_h(gv_value('username')) ?>" readonly required></div>
-                                    <?php if (!$editMode): ?><div class="gv-field"><label class="form-label">Password <?= gv_error($errors, 'password') ?></label><div class="input-group"><input type="password" name="password" class="form-control" id="password-field" minlength="12" autocomplete="new-password" required><button type="button" class="btn btn-outline-secondary" id="toggle-password" aria-label="Show password"><i class="fa fa-eye"></i></button></div></div><?php endif; ?>
+                                    <?php if (!$editMode): ?><div class="gv-field"><label class="form-label">Password <?= gv_error($errors, 'password') ?></label><div class="input-group"><input type="password" name="password" class="form-control" id="password-field" minlength="8" autocomplete="new-password" required><button type="button" class="btn btn-outline-secondary" id="toggle-password" aria-label="Show password"><i class="fa fa-eye"></i></button></div></div><?php endif; ?>
                                     <div class="gv-field"><label class="form-label">First Name <?= gv_error($errors, 'first_name') ?></label><input type="text" name="first_name" class="form-control" value="<?= gv_h(gv_value('first_name')) ?>" required></div>
                                     <div class="gv-field"><label class="form-label">Last Name <?= gv_error($errors, 'last_name') ?></label><input type="text" name="last_name" class="form-control" value="<?= gv_h(gv_value('last_name')) ?>" required></div>
                                     <div class="gv-field"><label class="form-label">Email <?= gv_error($errors, 'email') ?></label><input type="email" name="email" class="form-control" value="<?= gv_h(gv_value('email')) ?>" required></div>

@@ -23,8 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
     $confirmation = $_POST['password_confirmation'] ?? '';
 
-    if (strlen($password) < 12) {
-        $errors[] = 'Password must be at least 12 characters long.';
+    if (strlen($password) < 8) {
+        $errors[] = 'Password must be at least 8 characters long.';
     }
     if ($password !== $confirmation) {
         $errors[] = 'Passwords do not match.';
@@ -72,11 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
                             <div class="mb-3">
                                 <label for="password" class="form-label">New Password</label>
-                                <input type="password" id="password" name="password" class="form-control" minlength="12" required autofocus>
+                                <input type="password" id="password" name="password" class="form-control" minlength="8" required autofocus>
                             </div>
                             <div class="mb-4">
                                 <label for="password_confirmation" class="form-label">Confirm New Password</label>
-                                <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" minlength="12" required>
+                                <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" minlength="8" required>
                             </div>
                             <button type="submit" class="btn btn-primary w-100"><i class="fa fa-save me-1"></i>Update Password</button>
                         </form>

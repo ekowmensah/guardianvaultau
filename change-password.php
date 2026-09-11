@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([(int) $_SESSION['user_id']]);
     $currentHash = (string) $stmt->fetchColumn();
     if (!password_verify($currentPassword, $currentHash)) $errors[] = 'The current password is incorrect.';
-    if (strlen($newPassword) < 12) $errors[] = 'The new password must be at least 12 characters.';
+    if (strlen($newPassword) < 8) $errors[] = 'The new password must be at least 8 characters.';
     if ($newPassword !== $confirmation) $errors[] = 'The new passwords do not match.';
     if (password_verify($newPassword, $currentHash)) $errors[] = 'Choose a password different from the current password.';
     if (!$errors) {
@@ -32,8 +32,8 @@ include 'user_header.php';
 <?php foreach ($errors as $error): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endforeach; ?>
 <form method="post"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
 <div class="mb-3"><label class="form-label" for="current_password">Current password</label><input type="password" class="form-control" id="current_password" name="current_password" autocomplete="current-password" required></div>
-<div class="mb-3"><label class="form-label" for="new_password">New password</label><input type="password" class="form-control" id="new_password" name="new_password" minlength="12" autocomplete="new-password" required></div>
-<div class="mb-3"><label class="form-label" for="password_confirmation">Confirm new password</label><input type="password" class="form-control" id="password_confirmation" name="password_confirmation" minlength="12" autocomplete="new-password" required></div>
+<div class="mb-3"><label class="form-label" for="new_password">New password</label><input type="password" class="form-control" id="new_password" name="new_password" minlength="8" autocomplete="new-password" required></div>
+<div class="mb-3"><label class="form-label" for="password_confirmation">Confirm new password</label><input type="password" class="form-control" id="password_confirmation" name="password_confirmation" minlength="8" autocomplete="new-password" required></div>
 <button class="btn btn-primary">Update password</button> <a href="profile.php" class="btn btn-outline-secondary">Cancel</a></form>
 </div></div></div></main>
 <?php include 'user_footer.php'; ?>

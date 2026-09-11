@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($telephone !== '' && !preg_match('/^[0-9+() .-]{7,30}$/', $telephone)) {
         $errors[] = 'Enter a valid telephone number.';
     }
-    if (strlen($password) < 12) {
-        $errors[] = 'Password must be at least 12 characters.';
+    if (strlen($password) < 8) {
+        $errors[] = 'Password must be at least 8 characters.';
     }
     if ($password !== $confirmation) {
         $errors[] = 'Password confirmation does not match.';
@@ -114,11 +114,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="password">Password</label>
-                        <input class="form-control" id="password" name="password" type="password" minlength="12" autocomplete="new-password" required>
+                        <input class="form-control" id="password" name="password" type="password" minlength="8" autocomplete="new-password" required>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label" for="password_confirmation">Confirm Password</label>
-                        <input class="form-control" id="password_confirmation" name="password_confirmation" type="password" minlength="12" autocomplete="new-password" required>
+                        <input class="form-control" id="password_confirmation" name="password_confirmation" type="password" minlength="8" autocomplete="new-password" required>
                     </div>
                 </div>
                 <button class="btn btn-primary mt-4 w-100"><i class="fa fa-check me-1"></i>Create Administrator</button>
