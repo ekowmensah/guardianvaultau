@@ -22,6 +22,25 @@ $dbName = (string) guardian_config_value('GUARDIAN_DB_NAME', '');
 $dbUser = (string) guardian_config_value('GUARDIAN_DB_USER', '');
 $dbPassword = (string) guardian_config_value('GUARDIAN_DB_PASSWORD', '');
 $appKey = (string) guardian_config_value('GUARDIAN_APP_KEY', '');
+$sessionCheck = 'not tested';
+try {
+    session_name('GUARDIAN_DEPLOY_CHECK');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'domain' => '',
+        'httponly' => true,
+        'secure' => (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off'),
+        'samesite' => 'Lax',
+    ]);
+    session_start();
+    $_SESSION['deployment_check'] = time();
+    session_regenerate_id(true);
+    session_write_close();
+    $sessionCheck = 'ok';
+} catch (Throwable $sessionException) {
+    $sessionCheck = 'failed: ' . $sessionException->getMessage();
+}
 
 $checks[] = ['database host', $dbHost];
 $checks[] = ['database port', (string) $dbPort];
@@ -32,6 +51,7 @@ $checks[] = ['app key set', $appKey !== '' && strlen($appKey) >= 32 && !str_cont
 $sessionPath = session_save_path() ?: sys_get_temp_dir();
 $checks[] = ['session path', $sessionPath];
 $checks[] = ['session path writable', is_writable($sessionPath) ? 'yes' : 'no'];
+$checks[] = ['session runtime test', $sessionCheck];
 $checks[] = ['HTTPS detected', (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off') || strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https' ? 'yes' : 'no'];
 
 echo "Guardian Vault deployment check\n\n";
@@ -90,7 +110,22 @@ try {
             echo "First admin status: " . $firstAdmin['status'] . "\n";
             echo "First admin role: " . $firstAdmin['role'] . "\n";
             echo "First admin password hash: " . (password_get_info((string) $firstAdmin['password'])['algo'] !== 0 ? 'ok' : 'not a password_hash value') . "\n";
+            echo "First admin password rehash check: " . (password_needs_rehash((string) $firstAdmin['password'], PASSWORD_DEFAULT) ? 'would rehash on login' : 'ok') . "\n";
+            $stmt = $pdo->prepare('SELECT id, username, password, first_name, last_name, email, telephone_number, role, status, session_version, totp_secret FROM admin_users WHERE username = ? LIMIT 1');
+            $stmt->execute([$firstAdmin['username']]);
+            echo "Admin login lookup query: " . ($stmt->fetch() ? 'ok' : 'failed') . "\n";
         }
+        try {
+            $stmt = $pdo->prepare('SELECT SUM(username_hash = ? AND successful = 0) AS account_failures, SUM(ip_address = ? AND successful = 0) AS ip_failures FROM login_attempts WHERE realm = ? AND attempted_at >= (CURRENT_TIMESTAMP - INTERVAL 15 MINUTE)');
+            $stmt->execute([hash('sha256', 'deployment-check'), '127.0.0.1', 'admin']);
+            $stmt->fetch();
+            echo "Login rate-limit query: ok\n";
+        } catch (Throwable $rateLimitException) {
+            echo "Login rate-limit query: failed\n";
+            echo "Rate-limit error: " . $rateLimitException->getMessage() . "\n";
+        }
+        echo "Admin login file present: " . (is_file(__DIR__ . '/admin/admin_login_process.php') ? 'yes' : 'no') . "\n";
+        echo "Admin dashboard file present: " . (is_file(__DIR__ . '/admin/index.php') ? 'yes' : 'no') . "\n";
         try {
             (int) $pdo->query('SELECT COUNT(*) FROM data_quality_issues WHERE resolved_at IS NULL')->fetchColumn();
             (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
@@ -104,17 +139,19 @@ try {
             $pdo->beginTransaction();
             $stmt = $pdo->prepare('INSERT INTO login_attempts (realm, username_hash, ip_address, successful) VALUES (?, ?, ?, ?)');
             $stmt->execute(['admin', hash('sha256', 'deployment-check'), '127.0.0.1', 0]);
+            $pdo->exec('UPDATE login_attempts SET successful = successful WHERE id = LAST_INSERT_ID()');
+            $pdo->exec('UPDATE admin_users SET session_version = session_version WHERE id = 1');
             $stmt = $pdo->prepare('INSERT INTO security_event_log (realm, event_type, actor_id, subject_id, ip_address, user_agent, details) VALUES (?, ?, ?, ?, ?, ?, ?)');
             $stmt->execute(['admin', 'deployment_check', null, null, '127.0.0.1', 'deployment-check', 'write test']);
             $stmt = $pdo->prepare('INSERT INTO admin_activity_log (admin_id, action, target_user_id, details, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?)');
             $stmt->execute([1, 'deployment_check', null, 'write test', '127.0.0.1', 'deployment-check']);
             $pdo->rollBack();
-            echo "Database write test: ok\n";
+            echo "Database write/update test: ok\n";
         } catch (Throwable $writeException) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
-            echo "Database write test: failed\n";
+            echo "Database write/update test: failed\n";
             echo "Write error: " . $writeException->getMessage() . "\n";
             echo "Likely fix: grant INSERT, UPDATE, DELETE, and SELECT privileges to the configured database user in cPanel.\n";
         }
