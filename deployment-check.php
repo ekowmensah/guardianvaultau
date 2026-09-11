@@ -64,6 +64,20 @@ try {
         echo "Admin accounts: " . (int) $pdo->query('SELECT COUNT(*) FROM admin_users')->fetchColumn() . "\n";
         echo "Admins with MFA: " . (int) $pdo->query('SELECT COUNT(*) FROM admin_users WHERE totp_secret IS NOT NULL AND totp_secret <> ""')->fetchColumn() . "\n";
         echo "User accounts: " . (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() . "\n";
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('INSERT INTO login_attempts (realm, username_hash, ip_address, successful) VALUES (?, ?, ?, ?)');
+            $stmt->execute(['admin', hash('sha256', 'deployment-check'), '127.0.0.1', 0]);
+            $pdo->rollBack();
+            echo "Database write test: ok\n";
+        } catch (Throwable $writeException) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            echo "Database write test: failed\n";
+            echo "Write error: " . $writeException->getMessage() . "\n";
+            echo "Likely fix: grant INSERT, UPDATE, DELETE, and SELECT privileges to the configured database user in cPanel.\n";
+        }
     }
     if ($appKey === '' || strlen($appKey) < 32 || str_contains($appKey, 'replace-with-')) {
         echo "\nRequired fix: set GUARDIAN_APP_KEY in config.php to a random string of at least 32 characters. Keep the same value after launch; changing it later invalidates encrypted MFA secrets and signed statement verification.\n";
