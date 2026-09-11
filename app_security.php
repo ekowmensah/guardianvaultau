@@ -140,16 +140,47 @@ function start_secure_session(): void
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
     ini_set('session.cookie_httponly', '1');
-    session_name('GUARDIANSESSID');
+    session_name(app_session_name());
     session_set_cookie_params([
         'lifetime' => 0,
-        'path' => '/',
+        'path' => app_cookie_path(),
         'domain' => '',
         'httponly' => true,
         'secure' => request_is_https(),
         'samesite' => 'Lax',
     ]);
     session_start();
+}
+
+function app_session_name(): string
+{
+    $configuredName = (string) guardian_config_value('GUARDIAN_SESSION_NAME', '');
+    if ($configuredName !== '') {
+        return preg_replace('/[^A-Za-z0-9_]/', '', $configuredName) ?: 'GUARDIANSESSID';
+    }
+
+    $cookiePath = app_cookie_path();
+    if ($cookiePath === '/') {
+        return 'GUARDIANSESSID';
+    }
+
+    return 'GUARDIANSESSID_' . strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $cookiePath));
+}
+
+function app_cookie_path(): string
+{
+    $configuredPath = (string) guardian_config_value('GUARDIAN_COOKIE_PATH', '');
+    if ($configuredPath !== '') {
+        return $configuredPath;
+    }
+
+    $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    $parts = array_values(array_filter(explode('/', $scriptName), static fn (string $part): bool => $part !== ''));
+    if (count($parts) > 1 && !in_array($parts[0], ['admin'], true)) {
+        return '/' . $parts[0];
+    }
+
+    return '/';
 }
 
 function csrf_token(): string
@@ -388,5 +419,13 @@ function destroy_session(): void
             'samesite' => $params['samesite'] ?? 'Lax',
         ]);
     }
+    setcookie('GUARDIANSESSID', '', [
+        'expires' => time() - 42000,
+        'path' => '/',
+        'domain' => '',
+        'secure' => request_is_https(),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
     session_destroy();
 }

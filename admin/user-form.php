@@ -346,21 +346,23 @@ try {
                 $is_finishing = true;
             }
         }
-        // If errors, do not redirect; show errors on the relevant grouped step.
-        if (!empty($errors) && !$is_finishing) {
-            // Stay on the current step and show errors
-            $step = $_POST['current_step'] ?? $step;
-        } elseif (!$is_finishing) {
-            if ($is_going_back) {
-                // When going back, set $step to the previous step and do NOT redirect
-                $step = $_POST['next_step'];
-                // Just fall through and re-render that step with session data
-            } else {
-                // When going forward and there are no errors, redirect to new step
-                $step = $_POST['next_step'] ?? $step;
-                $editQuery = !empty($_POST['edit_id']) ? '&id=' . (int) $_POST['edit_id'] : '';
-                header("Location: user-form.php?step=$step$editQuery");
-                exit;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            // If errors, do not redirect; show errors on the relevant grouped step.
+            if (!empty($errors) && !$is_finishing) {
+                // Stay on the current step and show errors
+                $step = $_POST['current_step'] ?? $step;
+            } elseif (!$is_finishing) {
+                if ($is_going_back) {
+                    // When going back, set $step to the previous step and do NOT redirect
+                    $step = $_POST['next_step'];
+                    // Just fall through and re-render that step with session data
+                } else {
+                    // When going forward and there are no errors, redirect to new step
+                    $step = $_POST['next_step'] ?? $step;
+                    $editQuery = !empty($_POST['edit_id']) ? '&id=' . (int) $_POST['edit_id'] : '';
+                    header("Location: user-form.php?step=$step$editQuery");
+                    exit;
+                }
             }
         }
     } catch (Throwable $e) {
@@ -373,6 +375,7 @@ try {
 ?>
 <?php if (!isset($step)) { $step = $_GET['step'] ?? 'account'; } ?>
 <?php $step = ['profile' => 'account', 'state' => 'item', 'review' => 'kin', 'finish' => 'kin'][$step] ?? $step; ?>
+<?php if (!in_array($step, ['account', 'item', 'kin'], true)) { $step = 'account'; } ?>
 <?php include 'admin_header.php'; ?>
 <main class="col-md-10 ms-sm-auto main-content">
 <div class="container-fluid">

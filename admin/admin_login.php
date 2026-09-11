@@ -1,9 +1,13 @@
 <?php
 require_once __DIR__ . '/../app_security.php';
 start_secure_session();
-if (($_SESSION['auth_type'] ?? '') === 'admin') {
+if (($_SESSION['auth_type'] ?? '') === 'admin' && !empty($_SESSION['admin_id'])) {
     header('Location: index.php');
     exit;
+}
+if (($_SESSION['auth_type'] ?? '') !== '') {
+    destroy_session();
+    start_secure_session();
 }
 $errorMessages = [
     'invalid' => 'Invalid username or password.',

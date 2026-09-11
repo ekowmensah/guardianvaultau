@@ -3,9 +3,17 @@ require_once __DIR__ . '/app_security.php';
 start_secure_session();
 include_once("db_conn.php");
 
-if (isset($_SESSION['loggedin'])) {
-    header('Location: ' . (($_SESSION['auth_type'] ?? '') === 'admin' ? 'admin/index.php' : 'home.php'));
+if (($_SESSION['auth_type'] ?? '') === 'admin' && !empty($_SESSION['admin_id'])) {
+    header('Location: admin/index.php');
     exit;
+}
+if (($_SESSION['auth_type'] ?? '') === 'user' && !empty($_SESSION['user_id'])) {
+    header('Location: home.php');
+    exit;
+}
+if (($_SESSION['auth_type'] ?? '') !== '') {
+    destroy_session();
+    start_secure_session();
 }
 $errorMessages = [
     'invalid' => 'Invalid username or password.',

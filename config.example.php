@@ -14,6 +14,8 @@ return [
     'GUARDIAN_TIMEZONE' => 'Australia/Sydney',
     'GUARDIAN_ADMIN_MFA_REQUIRED' => '0',
     'GUARDIAN_TRUST_PROXY' => '0',
+    'GUARDIAN_COOKIE_PATH' => '',
+    'GUARDIAN_SESSION_NAME' => '',
     // Temporarily set to '1' only while checking a live deployment, then set back to '0'.
     'GUARDIAN_DEPLOYMENT_CHECK' => '0',
 ];
