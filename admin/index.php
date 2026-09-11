@@ -156,7 +156,6 @@ $visibleQuickLinks = array_values(array_filter($quickLinks, static function (arr
 }));
 ?>
 <?php include 'admin_header.php'; ?>
-</nav>
 <main class="col-md-10 ms-sm-auto main-content dashboard-page">
     <style>
         .dashboard-page {

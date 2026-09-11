@@ -9,6 +9,7 @@ $totalPages = 1;
 $search = trim($_GET['q'] ?? '');
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = 10;
+$loadError = '';
 try {
     // Handle Delete
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete' && isset($_POST['id'])) {
@@ -51,89 +52,110 @@ try {
         $pdo->rollBack();
     }
     error_log('Admin user list error: ' . $e->getMessage());
-    echo "<div class='alert alert-danger'>Unable to load user records.</div>";
+    $loadError = 'Unable to load user records.';
 }
 ?>
 <?php include 'admin_header.php'; ?>
 <main class="col-md-10 ms-sm-auto main-content">
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12">
-                <div class="card shadow-sm mb-4">
-                    <div class="card-body">
-                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
-                            <h2 class="mb-2 mb-md-0"><i class="fa fa-users me-2"></i>User Management</h2>
-                            <?php if (admin_can('manage_users')): ?><a href="user-form.php" class="btn btn-success"><i class="fa fa-plus me-1"></i> Add User</a><?php endif; ?>
-                        </div>
-                        <form method="get" class="row g-2 mb-4">
-                            <div class="col-md-8">
-                                <label for="userSearch" class="visually-hidden">Search users</label>
-                                <input type="search" id="userSearch" name="q" value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>" class="form-control" placeholder="Search username, name, or email">
-                            </div>
-                            <div class="col-auto"><button type="submit" class="btn btn-outline-primary"><i class="fa fa-search me-1"></i>Search</button></div>
-                            <?php if ($search !== ''): ?><div class="col-auto"><a href="user-list.php" class="btn btn-outline-secondary">Clear</a></div><?php endif; ?>
-                        </form>
-                        <div class="text-muted small mb-2">Showing <?= count($users) ?> of <?= $totalUsers ?> account<?= $totalUsers === 1 ? '' : 's' ?>.</div>
-<?php if (!empty($users)): ?>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle bg-white">
-            <thead class="table-light">
-                <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Username</th>
-                    <th scope="col">First Name</th>
-                    <th scope="col">Last Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Role</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($users as $user): ?>
-            <tr>
-                <td><?= htmlspecialchars($user['id']) ?></td>
-                <td><?= htmlspecialchars($user['username']) ?></td>
-                <td><?= htmlspecialchars($user['first_name']) ?></td>
-                <td><?= htmlspecialchars($user['last_name']) ?></td>
-                <td><?= htmlspecialchars($user['email']) ?></td>
-                <td><span class="badge bg-secondary"><?= htmlspecialchars($user['role']) ?></span></td>
-                <td><span class="badge <?= $user['status'] === 'Active' ? 'bg-success' : ($user['status'] === 'Suspended' ? 'bg-warning text-dark' : 'bg-secondary') ?>"><?= htmlspecialchars($user['status']) ?></span></td>
-                <td>
-                    <a href="user-view.php?id=<?= $user['id'] ?>" class="btn btn-outline-info btn-sm me-1" title="View"><i class="fa fa-eye"></i></a>
-                    <?php if (admin_can('manage_users')): ?>
-                    <a href="user-single-edit.php?id=<?= $user['id'] ?>" class="btn btn-outline-primary btn-sm me-1" title="Edit"><i class="fa fa-edit"></i></a>
-                    <a href="user-password.php?id=<?= (int) $user['id'] ?>" class="btn btn-outline-warning btn-sm me-1" title="Change password"><i class="fa fa-key"></i></a>
-                    <form method="post" action="user-list.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
-                        <input type="hidden" name="action" value="delete">
-                        <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
-                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete"><i class="fa fa-trash"></i></button>
-                    </form>
-                    <?php endif; ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
-    </div>
-<?php else: ?>
-    <div class="alert alert-info">No users found.</div>
-<?php endif; ?>
-<?php if (($totalPages ?? 1) > 1): ?>
-    <nav aria-label="User pages" class="mt-4">
-        <ul class="pagination justify-content-center">
-            <?php for ($pageNumber = 1; $pageNumber <= $totalPages; $pageNumber++): ?>
-                <li class="page-item <?= $pageNumber === $page ? 'active' : '' ?>">
-                    <a class="page-link" href="?q=<?= urlencode($search) ?>&page=<?= $pageNumber ?>"><?= $pageNumber ?></a>
-                </li>
-            <?php endfor; ?>
-        </ul>
-    </nav>
-<?php endif; ?>
+    <div class="admin-shell">
+        <section class="admin-page-header mb-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+                <div>
+                    <div class="admin-eyebrow mb-1">Customer records</div>
+                    <h1 class="h3 fw-bold mb-1"><i class="fa fa-users me-2"></i>Account Management</h1>
+                    <p class="mb-0">Search, review, edit, and maintain customer vault accounts.</p>
                 </div>
+                <?php if (admin_can('manage_users')): ?>
+                    <a href="user-form.php?step=account" class="btn btn-light px-4"><i class="fa fa-plus me-2"></i>Add Account</a>
+                <?php endif; ?>
             </div>
-        </div>
+        </section>
+
+        <?php if ($loadError): ?>
+            <div class="alert alert-danger py-2"><?= htmlspecialchars($loadError, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php endif; ?>
+
+        <section class="admin-card overflow-hidden">
+            <div class="admin-card-header">
+                <form method="get" class="row g-2 align-items-center">
+                    <div class="col-lg-8">
+                        <label for="userSearch" class="visually-hidden">Search users</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="fa fa-search text-muted"></i></span>
+                            <input type="search" id="userSearch" name="q" value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>" class="form-control border-start-0" placeholder="Search username, name, or email">
+                        </div>
+                    </div>
+                    <div class="col-auto"><button type="submit" class="btn btn-primary rounded-pill px-4">Search</button></div>
+                    <?php if ($search !== ''): ?><div class="col-auto"><a href="user-list.php" class="btn btn-outline-secondary rounded-pill px-4">Clear</a></div><?php endif; ?>
+                    <div class="col-lg text-lg-end text-muted small">Showing <?= count($users) ?> of <?= $totalUsers ?> account<?= $totalUsers === 1 ? '' : 's' ?></div>
+                </form>
+            </div>
+
+            <?php if (!empty($users)): ?>
+                <div class="table-responsive">
+                    <table class="table admin-table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Customer</th>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($users as $user): ?>
+                            <?php
+                            $fullName = trim((string) (($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
+                            $statusClass = $user['status'] === 'Active' ? 'admin-badge-success' : ($user['status'] === 'Suspended' ? 'admin-badge-warning' : 'admin-badge-muted');
+                            ?>
+                            <tr>
+                                <td class="text-muted">#<?= (int) $user['id'] ?></td>
+                                <td class="fw-bold"><?= htmlspecialchars($fullName ?: 'Unnamed customer', ENT_QUOTES, 'UTF-8') ?></td>
+                                <td class="font-monospace small"><?= htmlspecialchars($user['username'], ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><?= htmlspecialchars($user['email'] ?: '-', ENT_QUOTES, 'UTF-8') ?></td>
+                                <td><span class="admin-badge admin-badge-muted"><?= htmlspecialchars($user['role'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                                <td><span class="admin-badge <?= $statusClass ?>"><?= htmlspecialchars($user['status'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                                <td class="text-end">
+                                    <div class="admin-actions justify-content-end">
+                                        <a href="user-view.php?id=<?= (int) $user['id'] ?>" class="btn btn-outline-info btn-sm" title="View"><i class="fa fa-eye"></i></a>
+                                        <?php if (admin_can('manage_users')): ?>
+                                            <a href="user-single-edit.php?id=<?= (int) $user['id'] ?>" class="btn btn-outline-primary btn-sm" title="Edit"><i class="fa fa-edit"></i></a>
+                                            <a href="user-password.php?id=<?= (int) $user['id'] ?>" class="btn btn-outline-warning btn-sm" title="Change password"><i class="fa fa-key"></i></a>
+                                            <form method="post" action="user-list.php" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                                <input type="hidden" name="action" value="delete">
+                                                <input type="hidden" name="id" value="<?= (int) $user['id'] ?>">
+                                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete"><i class="fa fa-trash"></i></button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <div class="admin-card-body"><div class="admin-empty">No users found.</div></div>
+            <?php endif; ?>
+
+            <?php if (($totalPages ?? 1) > 1): ?>
+                <div class="admin-card-body border-top">
+                    <nav aria-label="User pages">
+                        <ul class="pagination justify-content-center mb-0">
+                            <?php for ($pageNumber = 1; $pageNumber <= $totalPages; $pageNumber++): ?>
+                                <li class="page-item <?= $pageNumber === $page ? 'active' : '' ?>">
+                                    <a class="page-link" href="?q=<?= urlencode($search) ?>&page=<?= $pageNumber ?>"><?= $pageNumber ?></a>
+                                </li>
+                            <?php endfor; ?>
+                        </ul>
+                    </nav>
+                </div>
+            <?php endif; ?>
+        </section>
     </div>
 </main>
 <?php if (($_GET['password'] ?? '') === 'updated'): ?>

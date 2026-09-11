@@ -3,276 +3,259 @@ require_once __DIR__ . '/../app_security.php';
 require_admin_capability('view_users');
 require_once __DIR__ . '/../db_conn.php';
 
-try {
-  if (!isset($_GET['id'])) {
-    throw new Exception('No user ID specified.');
-  }
-    $user_id = intval($_GET['id']);
-    $user = $pdo->prepare('SELECT id, username, first_name, last_name, email, telephone_number, role, status, created_at, updated_at FROM users WHERE id = ?');
-    $user->execute([$user_id]);
-    $user = $user->fetch(PDO::FETCH_ASSOC);
-    if (!$user) throw new Exception('User not found.');
-    $profile = $pdo->prepare('SELECT * FROM userprofile WHERE user_id = ?');
-    $profile->execute([$user_id]);
-    $profile = $profile->fetch(PDO::FETCH_ASSOC);
-    $item = $pdo->prepare('SELECT * FROM item_details WHERE user_id = ?');
-    $item->execute([$user_id]);
-    $item = $item->fetch(PDO::FETCH_ASSOC);
-    $state = $pdo->prepare('SELECT * FROM state_of_items WHERE user_id = ?');
-    $state->execute([$user_id]);
-    $state = $state->fetch(PDO::FETCH_ASSOC);
-    $kin = $pdo->prepare('SELECT * FROM next_of_kin WHERE user_id = ?');
-    $kin->execute([$user_id]);
-    $kin = $kin->fetch(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-  error_log('Admin user view error: ' . $e->getMessage());
-  echo "<div class='alert alert-danger'>Unable to load the user record.</div>";
+function gv_view_h(mixed $value): string
+{
+    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+}
+
+function gv_view_display(mixed $value, bool $multiline = false): string
+{
+    if ($value === null || $value === '') {
+        return '<span class="admin-badge admin-badge-muted">N/A</span>';
+    }
+
+    $escaped = gv_view_h($value);
+    return $multiline ? nl2br($escaped) : $escaped;
+}
+
+$user_id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+if (!$user_id) {
+    header('Location: user-list.php');
     exit;
 }
-?>
-<?php include 'admin_header.php'; ?>
-<main class="col-md-10 ms-sm-auto main-content">
-  <div class="container-fluid">
-    <div class="row justify-content-center">
-      <div class="col-lg-10">
-        <div class="card shadow border-0 statement-card mb-4">
-          <div class="card-body p-4 premium-bg">
-  <div class="statement-header mb-4 print-hide">
-    <div class="d-flex align-items-center">
-      <img src="../assets/img/thelogseclogo.png" alt="Guardian Vault logo" class="me-3" style="height:48px;">
-      <div>
-        <span class="fs-3 fw-bold text-primary">Vault Bank</span>
-        <div class="text-muted small">Digital Gold Vault - Secure. Trusted. Verified.</div>
-      </div>
-      <span class="badge bg-secondary ms-4 fs-6 verified-badge"><i class="fa fa-database me-1"></i>Current Account Record</span>
-    </div>
-    <div class="ms-auto d-flex align-items-center gap-2">
-      <button class="btn btn-outline-secondary me-2" id="printBtn"><i class="fa fa-print me-1"></i>Print</button>
-    </div>
-  </div>
-  <div class="statement-summary-box mb-4">
-    <div class="row g-3 align-items-center">
-      <div class="col-md-8">
-        <div class="fs-5 fw-semibold text-primary mb-1"><i class="fa fa-user-circle me-2 text-gold"></i><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></div>
-        <div class="mb-1"><strong>Username:</strong> <span class="text-dark"><?= htmlspecialchars($user['username']) ?></span></div>
-        <div class="mb-1"><strong>Email:</strong> <span class="text-dark"><?= htmlspecialchars($user['email']) ?></span></div>
-        <div><strong>Role:</strong> <span class="badge bg-secondary"><?= htmlspecialchars($user['role']) ?></span></div>
-      </div>
-      <div class="col-md-4 text-md-end">
-        <div class="mb-1"><strong>Viewed:</strong> <span class="text-dark"><?= date('F j, Y') ?></span></div>
-        <div class="mb-1"><strong>Account ID:</strong> <span class="text-dark"><?= 'USR-' . str_pad($user['id'], 6, '0', STR_PAD_LEFT) ?></span></div>
-      </div>
-    </div>
-  </div>
-  <div class="statement-divider mb-3"></div>
-  <div id="statement-content">
 
-            <div class="statement-section mb-4">
-  <div class="statement-section-header"><i class="fa fa-user text-gold me-2"></i>Account Holder Information</div>
-  <table class="table table-bordered align-middle mb-0 bg-white">
-    <tbody>
-      <tr><th scope="row">Full Name</th><td><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></td></tr>
-      <tr><th scope="row">Username</th><td><?= htmlspecialchars($user['username']) ?></td></tr>
-      <tr><th scope="row">Email</th><td><?= htmlspecialchars($user['email']) ?></td></tr>
-      <tr><th scope="row">Role</th><td><span class="badge bg-secondary"><?= htmlspecialchars($user['role']) ?></span></td></tr>
-    </tbody>
-  </table>
-</div>
-<div class="statement-section mb-4">
-  <div class="statement-section-header"><i class="fa fa-address-card text-gold me-2"></i>Profile Details</div>
-  <?php if ($profile): ?>
-    <table class="table table-bordered align-middle mb-0 bg-white">
-      <tbody>
-        <?php foreach ($profile as $key => $value): ?>
-  <?php if ($key !== 'user_id' && $key !== 'id'): ?>
-    <tr>
-      <th scope="row" class="text-capitalize"><?= ucwords(str_replace('_', ' ', $key)) ?></th>
-      <td>
-        <?php if ($key === 'married_status'): ?>
-          <?php if ($value === 'Single'): ?>
-            <span class="badge bg-primary">Single</span>
-          <?php elseif ($value === 'Married'): ?>
-            <span class="badge bg-success">Married</span>
-          <?php elseif ($value === 'Divorced'): ?>
-            <span class="badge bg-warning text-dark">Divorced</span>
-          <?php else: ?>
-            <?= $value === null || $value === '' ? '<span class=\'badge bg-secondary bg-opacity-25 text-muted\'>N/A</span>' : htmlspecialchars($value) ?>
-          <?php endif; ?>
-        <?php else: ?>
-          <?= $value === null || $value === '' ? '<span class=\'badge bg-secondary bg-opacity-25 text-muted\'>N/A</span>' : htmlspecialchars($value) ?>
-        <?php endif; ?>
-      </td>
-    </tr>
-  <?php endif; ?>
-<?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php else: ?>
-    <div class="text-muted">No profile info.</div>
-  <?php endif; ?>
-</div>
+try {
+    $stmt = $pdo->prepare('SELECT id, username, first_name, last_name, email, telephone_number, role, status, created_at, updated_at FROM users WHERE id = ?');
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$user) {
+        throw new RuntimeException('User not found.');
+    }
 
-            <div class="statement-section mb-4">
-  <div class="statement-section-header"><i class="fa fa-box-open text-gold me-2"></i>Item Details</div>
-  <?php if ($item): ?>
-    <table class="table table-bordered align-middle mb-0 bg-white">
-      <tbody>
-        <?php foreach ($item as $key => $value): ?>
-          <?php if ($key !== 'user_id' && $key !== 'id'): ?>
-            <tr>
-              <th scope="row" class="text-capitalize"><?= ucwords(str_replace('_', ' ', $key)) ?></th>
-              <td><?= $value === null || $value === '' ? '<span class=\'badge bg-secondary bg-opacity-25 text-muted\'>N/A</span>' : htmlspecialchars($value) ?></td>
-            </tr>
-          <?php endif; ?>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php else: ?>
-    <div class="text-muted">No item details.</div>
-  <?php endif; ?>
-</div>
-<div class="statement-section mb-4">
-  <div class="statement-section-header"><i class="fa fa-warehouse text-gold me-2"></i>State of Items</div>
-  <?php if ($state): ?>
-    <table class="table table-bordered align-middle mb-0 bg-white">
-      <tbody>
-        <?php foreach ($state as $key => $value): ?>
-          <?php if ($key !== 'user_id' && $key !== 'id'): ?>
-            <tr>
-              <th scope="row" class="text-capitalize"><?= ucwords(str_replace('_', ' ', $key)) ?></th>
-              <td><?= $value === null || $value === '' ? '<span class=\'badge bg-secondary bg-opacity-25 text-muted\'>N/A</span>' : htmlspecialchars($value) ?></td>
-            </tr>
-          <?php endif; ?>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php else: ?>
-    <div class="text-muted">No state info.</div>
-  <?php endif; ?>
-</div>
+    $profileStmt = $pdo->prepare('SELECT * FROM userprofile WHERE user_id = ?');
+    $profileStmt->execute([$user_id]);
+    $profile = $profileStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-            <div class="statement-section mb-4">
-  <div class="statement-section-header"><i class="fa fa-users text-gold me-2"></i>Next of Kin</div>
-  <?php if ($kin): ?>
-    <table class="table table-bordered align-middle mb-0 bg-white">
-      <tbody>
-        <?php foreach ($kin as $key => $value): ?>
-          <?php if ($key !== 'user_id' && $key !== 'id'): ?>
-            <tr>
-              <th scope="row" class="text-capitalize"><?= ucwords(str_replace('_', ' ', $key)) ?></th>
-              <td><?= $value === null || $value === '' ? '<span class=\'badge bg-secondary bg-opacity-25 text-muted\'>N/A</span>' : htmlspecialchars($value) ?></td>
-            </tr>
-          <?php endif; ?>
-        <?php endforeach; ?>
-      </tbody>
-    </table>
-  <?php else: ?>
-    <div class="text-muted">No next of kin info.</div>
-  <?php endif; ?>
-</div>
+    $itemStmt = $pdo->prepare('SELECT * FROM item_details WHERE user_id = ?');
+    $itemStmt->execute([$user_id]);
+    $item = $itemStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-            <!-- Watermark/accent -->
-            <div class="statement-watermark">GUARDIAN VAULT</div>
-            </div> <!-- #statement-content -->
-            <div class="statement-divider mb-4"></div>
-            <footer class="statement-footer text-center py-3">
-              <div class="mb-2 small text-muted">This screen shows the current database record and is not an immutable account statement.</div>
-              <div class="mt-2 small text-muted">For inquiries: <a href="mailto:support@guardian-vault.com" class="text-primary text-decoration-none">support@guardian-vault.com/</a> | +1 (800) 555-VAULT</div>
-              <div class="mt-2 small text-muted">&copy; <?= date('Y') ?> Guardian Vault. All rights reserved.</div>
-            </footer>
-            <div class="d-flex justify-content-end mt-4 print-hide">
-              <a href="user-list.php" class="btn btn-outline-secondary"><i class="fa fa-arrow-left me-1"></i>Back</a>
-            </div>
-          </div>
+    $stateStmt = $pdo->prepare('SELECT * FROM state_of_items WHERE user_id = ?');
+    $stateStmt->execute([$user_id]);
+    $state = $stateStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    $kinStmt = $pdo->prepare('SELECT * FROM next_of_kin WHERE user_id = ?');
+    $kinStmt->execute([$user_id]);
+    $kin = $kinStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+} catch (Throwable $e) {
+    error_log('Admin user view error: ' . $e->getMessage());
+    include 'admin_header.php';
+    ?>
+    <main class="col-md-10 ms-sm-auto main-content">
+        <div class="admin-shell">
+            <div class="alert alert-danger">Unable to load the user record.</div>
+            <a href="user-list.php" class="btn btn-outline-secondary rounded-pill px-4">Back to users</a>
         </div>
-      </div>
+    </main>
+    <?php
+    include 'admin_footer.php';
+    exit;
+}
+
+$fullName = trim((string) (($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')));
+$fullName = $fullName !== '' ? $fullName : 'Unnamed customer';
+$statusClass = $user['status'] === 'Active' ? 'admin-badge-success' : ($user['status'] === 'Suspended' ? 'admin-badge-warning' : 'admin-badge-muted');
+
+$sections = [
+    'Account holder' => [
+        'icon' => 'fa-user',
+        'data' => [
+            'Full name' => $fullName,
+            'Username' => $user['username'] ?? '',
+            'Email' => $user['email'] ?? '',
+            'Telephone' => $user['telephone_number'] ?? '',
+            'Role' => $user['role'] ?? '',
+            'Created' => $user['created_at'] ?? '',
+            'Updated' => $user['updated_at'] ?? '',
+        ],
+    ],
+    'Profile' => [
+        'icon' => 'fa-address-card',
+        'data' => [
+            'Nationality' => $profile['nationality'] ?? null,
+            'Marital status' => $profile['married_status'] ?? null,
+            'Has child' => $profile['has_child'] ?? null,
+            'Child name' => $profile['child_name'] ?? null,
+            'Address' => $profile['address'] ?? null,
+        ],
+        'multiline' => ['Address'],
+    ],
+    'Deposit' => [
+        'icon' => 'fa-box-open',
+        'data' => [
+            'Insurance number' => $item['insurance_number'] ?? null,
+            'Reference code' => $item['reference_code'] ?? null,
+            'Transaction code' => $item['transaction_code'] ?? null,
+            'Box dimension' => $item['box_dimension'] ?? null,
+            'Deposited item' => $item['deposited_item'] ?? null,
+            'Package type' => $item['package_type'] ?? null,
+            'Package quantity' => $item['package_quantity'] ?? null,
+            'Total weight' => $item['total_weight'] ?? null,
+            'Deposit date' => $item['deposit_date'] ?? null,
+            'Monthly charges' => $item['monthly_charges'] ?? null,
+            'Amount paid' => $item['amount_paid'] ?? null,
+            'Currency' => $item['currency'] ?? null,
+        ],
+        'multiline' => ['Deposited item'],
+    ],
+    'Value & safe keeping' => [
+        'icon' => 'fa-warehouse',
+        'data' => [
+            'Current gold worth' => $state['current_gold_worth'] ?? null,
+            'Price per kilogram' => $state['price_per_kilogram'] ?? null,
+            'Cost of safe keeping' => $state['cost_of_safe_keeping'] ?? null,
+            'Date of safe keeping' => $state['date_of_safe_keeping'] ?? null,
+            'Quantity' => $state['quantity'] ?? null,
+            'Currency' => $state['currency'] ?? null,
+        ],
+    ],
+    'Beneficiary' => [
+        'icon' => 'fa-users',
+        'data' => [
+            'Name' => $kin['name_of_beneficial'] ?? null,
+            'Relationship' => $kin['relation_with_user'] ?? null,
+            'Date of birth' => $kin['date_of_birth'] ?? null,
+            'Email' => $kin['email_address'] ?? null,
+            'Telephone' => $kin['telephone_number_kin'] ?? null,
+            'Address' => $kin['address'] ?? null,
+        ],
+        'multiline' => ['Address'],
+    ],
+];
+
+include 'admin_header.php';
+?>
+<main class="col-md-10 ms-sm-auto main-content">
+    <style>
+        .record-section {
+            break-inside: avoid;
+        }
+
+        .record-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .65rem;
+        }
+
+        .record-field {
+            border: 1px solid rgba(148, 163, 184, .22);
+            border-radius: 14px;
+            background: #fff;
+            padding: .75rem;
+            min-width: 0;
+        }
+
+        .record-field-value {
+            overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 767.98px) {
+            .record-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media print {
+            .sidebar,
+            .navbar,
+            .print-hide {
+                display: none !important;
+            }
+
+            .main-content {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+
+            .admin-page-header,
+            .admin-card {
+                box-shadow: none !important;
+            }
+        }
+    </style>
+
+    <div class="admin-shell">
+        <section class="admin-page-header mb-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+                <div>
+                    <div class="admin-eyebrow mb-1">Current account record</div>
+                    <h1 class="h3 fw-bold mb-1"><i class="fa fa-user-circle me-2"></i><?= gv_view_h($fullName) ?></h1>
+                    <p class="mb-0">
+                        <span class="font-monospace"><?= gv_view_h($user['username']) ?></span>
+                        <span class="text-white-50 ms-2">Account ID: USR-<?= str_pad((string) $user['id'], 6, '0', STR_PAD_LEFT) ?></span>
+                    </p>
+                </div>
+                <div class="d-flex flex-wrap gap-2 print-hide">
+                    <span class="btn btn-light disabled px-4"><?= gv_view_h($user['status']) ?></span>
+                    <button type="button" class="btn btn-warning px-4" id="printBtn"><i class="fa fa-print me-2"></i>Print</button>
+                    <?php if (admin_can('manage_users')): ?><a href="user-form.php?id=<?= (int) $user['id'] ?>" class="btn btn-light px-4"><i class="fa fa-edit me-2"></i>Edit</a><?php endif; ?>
+                </div>
+            </div>
+        </section>
+
+        <section class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="admin-card admin-card-body h-100">
+                    <div class="admin-label mb-2">Status</div>
+                    <span class="admin-badge <?= $statusClass ?>"><?= gv_view_h($user['status']) ?></span>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="admin-card admin-card-body h-100">
+                    <div class="admin-label mb-2">Email</div>
+                    <div class="fw-bold text-truncate"><?= gv_view_h($user['email'] ?: '-') ?></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="admin-card admin-card-body h-100">
+                    <div class="admin-label mb-2">Reference</div>
+                    <div class="fw-bold font-monospace text-truncate"><?= gv_view_h($item['reference_code'] ?? '-') ?></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="row g-3">
+            <?php foreach ($sections as $title => $section): ?>
+                <div class="col-xl-6">
+                    <article class="admin-card record-section h-100">
+                        <div class="admin-card-header">
+                            <h2 class="h5 fw-bold mb-0"><i class="fa <?= gv_view_h($section['icon']) ?> me-2 text-primary"></i><?= gv_view_h($title) ?></h2>
+                        </div>
+                        <div class="admin-card-body">
+                            <div class="record-grid">
+                                <?php foreach ($section['data'] as $label => $value): ?>
+                                    <div class="record-field">
+                                        <div class="admin-label mb-1"><?= gv_view_h($label) ?></div>
+                                        <div class="record-field-value"><?= gv_view_display($value, in_array($label, $section['multiline'] ?? [], true)) ?></div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+            <?php endforeach; ?>
+        </section>
+
+        <div class="d-flex justify-content-between align-items-center gap-2 mt-3 print-hide">
+            <div class="small text-muted">This is the live database record, not an immutable account statement.</div>
+            <a href="user-list.php" class="btn btn-outline-secondary rounded-pill px-4"><i class="fa fa-arrow-left me-1"></i>Back</a>
+        </div>
     </div>
-  </div>
 </main>
-<style>
-  .premium-bg { background: #f8fafc; }
-  .statement-card { position: relative; background: #fff; border-radius: 1rem; border: 1.5px solid #ffc107; box-shadow: 0 2px 16px 0 #e3e7f1; }
-  .statement-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ffc107; padding-bottom: 0.75rem; }
-  .verified-badge { border-radius: 0.5rem; font-weight: 600; letter-spacing: 1px; box-shadow: 0 2px 4px 0 #f4e7c1; }
-  .statement-summary-box { background: #fffbe6; border: 1.5px solid #ffc107; border-radius: 0.75rem; padding: 1.25rem 1.5rem; box-shadow: 0 2px 8px 0 #f4e7c1; }
-  .statement-divider { border-bottom: 2px dashed #ffc107; margin: 2rem 0 1.5rem 0; }
-  .statement-section-header {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1a237e;
-    background: #f6f8fc;
-    padding: 0.5rem 1rem;
-    border-left: 5px solid #ffc107;
-    margin-bottom: 0.5rem;
-    border-radius: 0.25rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    box-shadow: 0 1px 4px 0 #e3e7f1;
-  }
-  .statement-section { margin-bottom: 2rem; }
-  .statement-section table {
-    border-color: #ffc107 !important;
-  }
-  .statement-section table th, .statement-section table td {
-    background: #fff !important;
-    border-color: #ffc107 !important;
-    padding: 0.75rem 1rem;
-    vertical-align: middle;
-  }
-  .statement-section table tbody tr:nth-child(odd) td {
-    background: #fffbe6 !important;
-  }
-  .statement-section table tbody tr:hover td {
-    background: #fff3cd !important;
-    transition: background 0.2s;
-  }
-  .text-gold { color: #ffc107 !important; }
-  .statement-watermark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    font-size: 6rem;
-    color: #ffc107;
-    opacity: 0.08;
-    font-weight: 900;
-    font-family: 'Segoe UI', 'Arial', sans-serif;
-    pointer-events: none;
-    transform: translate(-50%, -50%) rotate(-18deg);
-    user-select: none;
-    z-index: 0;
-    letter-spacing: 0.3em;
-    text-shadow: 0 2px 16px #fffbe6;
-  }
-  .statement-footer {
-    border-top: 2px solid #ffc107;
-    background: #f6f8fc;
-    border-radius: 0 0 1rem 1rem;
-    margin-top: 2rem;
-    font-size: 0.95rem;
-  }
-  .btn-outline-secondary, .btn-outline-success {
-    border-width: 2px;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-  }
-  .btn-outline-secondary:hover, .btn-outline-success:hover {
-    background: #ffc107 !important;
-    color: #1a237e !important;
-    border-color: #ffc107 !important;
-    box-shadow: 0 1px 8px #ffe082;
-  }
-  @media print {
-    .print-hide, .print-hide * { display: none !important; }
-    .statement-card { box-shadow: none !important; border: 1px solid #bbb !important; }
-    body { background: #fff !important; }
-    .statement-footer { color: #444 !important; background: #fff !important; border: none !important; }
-    .statement-watermark { opacity: 0.13 !important; }
-  }
-</style>
 <script>
-  document.getElementById('printBtn').onclick = function() {
+document.getElementById('printBtn')?.addEventListener('click', function () {
     window.print();
-  };
+});
 </script>
 <?php include 'admin_footer.php'; ?>

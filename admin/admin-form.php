@@ -71,29 +71,77 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <?php include 'admin_header.php'; ?>
 <main class="col-md-10 ms-sm-auto main-content">
-<div class="container mt-4">
-    <h2><?= $edit ? 'Edit' : 'Add' ?> Admin</h2>
-    <?php foreach ($errors as $error): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endforeach; ?>
-    <form method="post">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
-        <?php if ($edit): ?><input type="hidden" name="id" value="<?= $id ?>"><?php endif; ?>
-        <div class="mb-3">
-            <label class="form-label">Username</label>
-            <input type="text" name="username" class="form-control" value="<?= htmlspecialchars($username) ?>" required>
+    <div class="admin-shell">
+        <section class="admin-page-header mb-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+                <div>
+                    <div class="admin-eyebrow mb-1"><?= $edit ? 'Update access' : 'Create access' ?></div>
+                    <h1 class="h3 fw-bold mb-1"><i class="fa fa-user-shield me-2"></i><?= $edit ? 'Edit' : 'Add' ?> Administrator</h1>
+                    <p class="mb-0">Set the login identity, permission role, and account status.</p>
+                </div>
+                <a href="admin-list.php" class="btn btn-light px-4">
+                    <i class="fa fa-arrow-left me-2"></i>Admin List
+                </a>
+            </div>
+        </section>
+
+        <div class="row g-3 justify-content-center">
+            <div class="col-lg-7 col-xl-6">
+                <section class="admin-card">
+                    <div class="admin-card-header">
+                        <h2 class="h5 fw-bold mb-1">Admin details</h2>
+                        <p class="small text-muted mb-0"><?= $edit ? 'Leave password blank to keep the current password.' : 'New administrators need a password of at least 8 characters.' ?></p>
+                    </div>
+                    <div class="admin-card-body">
+                        <?php foreach ($errors as $error): ?>
+                            <div class="alert alert-danger py-2"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endforeach; ?>
+
+                        <form method="post" autocomplete="off">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+                            <?php if ($edit): ?><input type="hidden" name="id" value="<?= (int) $id ?>"><?php endif; ?>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="username">Username</label>
+                                <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?>" maxlength="100" required autofocus>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label" for="password"><?= $edit ? 'New Password' : 'Password' ?></label>
+                                <input type="password" id="password" name="password" class="form-control" minlength="8" autocomplete="new-password" <?= $edit ? '' : 'required' ?>>
+                                <div class="form-text">Minimum 8 characters.</div>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="role">Role</label>
+                                    <select id="role" name="role" class="form-select" required>
+                                        <?php foreach (['super_admin' => 'Super administrator', 'operator' => 'Operator', 'auditor' => 'Auditor'] as $value => $label): ?>
+                                            <option value="<?= $value ?>" <?= $role === $value ? 'selected' : '' ?>><?= $label ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="status">Status</label>
+                                    <select id="status" name="status" class="form-select" required>
+                                        <?php foreach (['Active', 'Suspended'] as $value): ?>
+                                            <option value="<?= $value ?>" <?= $status === $value ? 'selected' : '' ?>><?= $value ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-4">
+                                <a href="admin-list.php" class="btn btn-outline-secondary px-4">Cancel</a>
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="fa fa-save me-2"></i><?= $edit ? 'Update Admin' : 'Create Admin' ?>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+            </div>
         </div>
-        <div class="mb-3">
-            <label class="form-label"><?= $edit ? 'New ' : '' ?>Password</label>
-            <input type="password" name="password" class="form-control" minlength="8" autocomplete="new-password" <?= $edit ? '' : 'required' ?>>
-        </div>
-        <div class="mb-3"><label class="form-label">Role</label><select name="role" class="form-select" required>
-            <?php foreach (['super_admin' => 'Super administrator', 'operator' => 'Operator', 'auditor' => 'Auditor'] as $value => $label): ?><option value="<?= $value ?>" <?= $role === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?>
-        </select></div>
-        <div class="mb-3"><label class="form-label">Status</label><select name="status" class="form-select" required>
-            <?php foreach (['Active', 'Suspended'] as $value): ?><option value="<?= $value ?>" <?= $status === $value ? 'selected' : '' ?>><?= $value ?></option><?php endforeach; ?>
-        </select></div>
-        <button type="submit" class="btn btn-primary"><?= $edit ? 'Update' : 'Add' ?> Admin</button>
-        <a href="admin-list.php" class="btn btn-secondary">Cancel</a>
-    </form>
-</div>
+    </div>
 </main>
 <?php include 'admin_footer.php'; ?>

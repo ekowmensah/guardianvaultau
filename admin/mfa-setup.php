@@ -41,15 +41,69 @@ $label = rawurlencode('Guardian Vault:' . ($admin['username'] ?? 'admin'));
 $otpUri = "otpauth://totp/{$label}?secret={$secret}&issuer={$issuer}&algorithm=SHA1&digits=6&period=30";
 include 'admin_header.php';
 ?>
-<main class="col-md-10 ms-sm-auto main-content"><div class="container" style="max-width:760px"><div class="card shadow-sm"><div class="card-body p-4">
-<h1 class="h3"><i class="fa fa-mobile-alt me-2"></i>Multi-factor authentication</h1>
-<?php if ($enrolled): ?><div class="alert alert-success mb-0">TOTP multi-factor authentication is enabled for this administrator.</div>
-<?php else: ?>
-<?php if (isset($_GET['required'])): ?><div class="alert alert-warning">Multi-factor authentication is required before accessing the admin portal.</div><?php endif; ?>
-<ol><li>Add a new time-based account in your authenticator app.</li><li>Enter this setup key: <code class="user-select-all"><?= htmlspecialchars($secret, ENT_QUOTES, 'UTF-8') ?></code></li><li>Confirm the generated six-digit code below.</li></ol>
-<details class="mb-3"><summary>Advanced setup URI</summary><code class="text-break"><?= htmlspecialchars($otpUri, ENT_QUOTES, 'UTF-8') ?></code></details>
-<?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
-<form method="post"><input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>"><label class="form-label" for="code">Authentication code</label><input id="code" name="code" class="form-control mb-3" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required><button class="btn btn-primary">Enable MFA</button></form>
-<?php endif; ?>
-</div></div></div></main>
+<main class="col-md-10 ms-sm-auto main-content">
+    <div class="admin-shell">
+        <section class="admin-page-header mb-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+                <div>
+                    <div class="admin-eyebrow mb-1">Security</div>
+                    <h1 class="h3 fw-bold mb-1"><i class="fa fa-mobile-alt me-2"></i>Multi-factor Authentication</h1>
+                    <p class="mb-0">Protect administrator access with a six-digit authenticator code.</p>
+                </div>
+                <span class="btn btn-light disabled px-4"><?= $enrolled ? 'Enabled' : 'Setup required' ?></span>
+            </div>
+        </section>
+
+        <div class="row g-3 justify-content-center">
+            <div class="col-lg-8 col-xl-7">
+                <section class="admin-card">
+                    <div class="admin-card-body">
+                        <?php if ($enrolled): ?>
+                            <div class="alert alert-success mb-0">
+                                <i class="fa fa-check-circle me-2"></i>TOTP multi-factor authentication is enabled for this administrator.
+                            </div>
+                        <?php else: ?>
+                            <?php if (isset($_GET['required'])): ?>
+                                <div class="alert alert-warning py-2">Multi-factor authentication is required before accessing the admin portal.</div>
+                            <?php endif; ?>
+
+                            <div class="row g-3">
+                                <div class="col-lg-7">
+                                    <h2 class="h5 fw-bold mb-3">Setup steps</h2>
+                                    <ol class="small text-muted mb-0">
+                                        <li class="mb-2">Add a new time-based account in your authenticator app.</li>
+                                        <li class="mb-2">Enter the setup key shown on the right.</li>
+                                        <li>Confirm the generated six-digit code below.</li>
+                                    </ol>
+                                </div>
+                                <div class="col-lg-5">
+                                    <div class="p-3 rounded-4 bg-light border">
+                                        <div class="admin-label mb-2">Setup key</div>
+                                        <code class="user-select-all text-break"><?= htmlspecialchars($secret, ENT_QUOTES, 'UTF-8') ?></code>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <details class="my-3">
+                                <summary class="small text-muted">Advanced setup URI</summary>
+                                <code class="text-break small"><?= htmlspecialchars($otpUri, ENT_QUOTES, 'UTF-8') ?></code>
+                            </details>
+
+                            <?php if ($error): ?><div class="alert alert-danger py-2"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div><?php endif; ?>
+
+                            <form method="post" class="mt-3">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token(), ENT_QUOTES, 'UTF-8') ?>">
+                                <label class="form-label" for="code">Authentication code</label>
+                                <div class="d-flex flex-column flex-sm-row gap-2">
+                                    <input id="code" name="code" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required autofocus>
+                                    <button class="btn btn-primary px-4 rounded-pill">Enable MFA</button>
+                                </div>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+</main>
 <?php include 'admin_footer.php'; ?>

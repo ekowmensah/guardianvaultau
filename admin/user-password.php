@@ -44,21 +44,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <?php include 'admin_header.php'; ?>
 <main class="col-md-10 ms-sm-auto main-content">
-    <div class="container-fluid">
+    <div class="admin-shell">
+        <section class="admin-page-header mb-3">
+            <div class="d-flex flex-column flex-lg-row justify-content-between gap-3 align-items-lg-center">
+                <div>
+                    <div class="admin-eyebrow mb-1">Account security</div>
+                    <h1 class="h3 fw-bold mb-1"><i class="fa fa-key me-2"></i>Change User Password</h1>
+                    <p class="mb-0">
+                        <?= htmlspecialchars(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?: $user['username'], ENT_QUOTES, 'UTF-8') ?>
+                        <span class="text-white-50">(<?= htmlspecialchars($user['username'], ENT_QUOTES, 'UTF-8') ?>)</span>
+                    </p>
+                </div>
+                <a href="user-list.php" class="btn btn-light px-4"><i class="fa fa-arrow-left me-2"></i>Users</a>
+            </div>
+        </section>
+
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <div>
-                                <h2 class="mb-1"><i class="fa fa-key me-2"></i>Change Password</h2>
-                                <div class="text-muted">
-                                    <?= htmlspecialchars(trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?: $user['username'], ENT_QUOTES, 'UTF-8') ?>
-                                    <span class="small">(<?= htmlspecialchars($user['username'], ENT_QUOTES, 'UTF-8') ?>)</span>
-                                </div>
-                            </div>
-                            <a href="user-list.php" class="btn btn-outline-secondary" title="Back to users"><i class="fa fa-arrow-left"></i></a>
-                        </div>
+                <section class="admin-card">
+                    <div class="admin-card-body">
 
                         <?php if ($errors): ?>
                             <div class="alert alert-danger">
@@ -73,15 +77,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="mb-3">
                                 <label for="password" class="form-label">New Password</label>
                                 <input type="password" id="password" name="password" class="form-control" minlength="8" required autofocus>
+                                <div class="form-text">Minimum 8 characters.</div>
                             </div>
                             <div class="mb-4">
                                 <label for="password_confirmation" class="form-label">Confirm New Password</label>
                                 <input type="password" id="password_confirmation" name="password_confirmation" class="form-control" minlength="8" required>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100"><i class="fa fa-save me-1"></i>Update Password</button>
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="fa fa-save me-1"></i>Update Password</button>
                         </form>
                     </div>
-                </div>
+                </section>
             </div>
         </div>
     </div>
