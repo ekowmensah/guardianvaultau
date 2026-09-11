@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/app_config.php';
 
+guardian_install_runtime_debug_handlers();
+
 date_default_timezone_set((string) guardian_config_value('GUARDIAN_TIMEZONE', 'Australia/Sydney'));
 
 function app_environment(): string
