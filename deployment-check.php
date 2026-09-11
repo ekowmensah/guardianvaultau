@@ -54,6 +54,20 @@ try {
     $tables = (int) $pdo->query('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()')->fetchColumn();
     echo "\nDatabase connection: ok\n";
     echo "Tables found: {$tables}\n";
+    $requiredTables = ['admin_users', 'users', 'login_attempts', 'security_event_log', 'schema_migrations'];
+    foreach ($requiredTables as $table) {
+        $stmt = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+        $stmt->execute([$table]);
+        echo "Table {$table}: " . ((int) $stmt->fetchColumn() === 1 ? 'ok' : 'missing') . "\n";
+    }
+    if ($tables > 0) {
+        echo "Admin accounts: " . (int) $pdo->query('SELECT COUNT(*) FROM admin_users')->fetchColumn() . "\n";
+        echo "Admins with MFA: " . (int) $pdo->query('SELECT COUNT(*) FROM admin_users WHERE totp_secret IS NOT NULL AND totp_secret <> ""')->fetchColumn() . "\n";
+        echo "User accounts: " . (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn() . "\n";
+    }
+    if ($appKey === '' || strlen($appKey) < 32 || str_contains($appKey, 'replace-with-')) {
+        echo "\nRequired fix: set GUARDIAN_APP_KEY in config.php to a random string of at least 32 characters. Keep the same value after launch; changing it later invalidates encrypted MFA secrets and signed statement verification.\n";
+    }
 } catch (Throwable $exception) {
     $sqlState = $exception instanceof PDOException && isset($exception->errorInfo[0]) ? (string) $exception->errorInfo[0] : 'n/a';
     $driverCode = $exception instanceof PDOException && isset($exception->errorInfo[1]) ? (string) $exception->errorInfo[1] : 'n/a';
