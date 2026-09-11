@@ -10,25 +10,36 @@ function db_connection(): PDO
         return $connection;
     }
 
-    $dbHost = (string) guardian_config_value('GUARDIAN_DB_HOST', 'localhost');
-    $dbPort = (int) guardian_config_value('GUARDIAN_DB_PORT', 3306);
-    $dbName = (string) guardian_config_value('GUARDIAN_DB_NAME', 'guardianvaultau');
-    $configuredUser = guardian_config_value('GUARDIAN_DB_USER');
-    $configuredPassword = guardian_config_value('GUARDIAN_DB_PASSWORD');
-    $environment = strtolower((string) guardian_config_value('GUARDIAN_APP_ENV', 'local'));
-    $isLocalRequest = PHP_SAPI === 'cli' || in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
-
-    if ($environment === 'production' && (!$configuredUser || $configuredPassword === false || $configuredPassword === '')) {
-        throw new RuntimeException('Production database credentials are not configured.');
-    }
-    if (!$isLocalRequest && (!$configuredUser || $configuredPassword === false || $configuredPassword === '')) {
-        throw new RuntimeException('Database credentials are required for non-local requests.');
-    }
-
-    $dbUser = (string) ($configuredUser ?: 'root');
-    $dbPassword = (string) ($configuredPassword !== false ? $configuredPassword : '');
-
     try {
+        $dbHost = (string) guardian_config_value('GUARDIAN_DB_HOST', 'localhost');
+        $dbPort = (int) guardian_config_value('GUARDIAN_DB_PORT', 3306);
+        $dbName = (string) guardian_config_value('GUARDIAN_DB_NAME', 'guardianvaultau');
+        $configuredUser = guardian_config_value('GUARDIAN_DB_USER');
+        $configuredPassword = guardian_config_value('GUARDIAN_DB_PASSWORD');
+        $environment = strtolower((string) guardian_config_value('GUARDIAN_APP_ENV', 'local'));
+        $isLocalRequest = PHP_SAPI === 'cli' || in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
+
+        if ($environment === 'production' && (!$configuredUser || $configuredPassword === false || $configuredPassword === '')) {
+            throw new RuntimeException('Production database credentials are not configured.');
+        }
+        if (!$isLocalRequest && (!$configuredUser || $configuredPassword === false || $configuredPassword === '')) {
+            throw new RuntimeException('Database credentials are required for non-local requests.');
+        }
+
+        $placeholders = [
+            'cpaneluser_guardianvaultau',
+            'cpaneluser_guardianapp',
+            'replace-with-the-cpanel-database-password',
+        ];
+        foreach ([$dbName, (string) $configuredUser, (string) $configuredPassword] as $value) {
+            if (in_array($value, $placeholders, true) || str_contains($value, 'replace-with-')) {
+                throw new RuntimeException('Database configuration still contains placeholder values.');
+            }
+        }
+
+        $dbUser = (string) ($configuredUser ?: 'root');
+        $dbPassword = (string) ($configuredPassword !== false ? $configuredPassword : '');
+
         $connection = new PDO(
             "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4",
             $dbUser,
@@ -41,7 +52,7 @@ function db_connection(): PDO
             ]
         );
         return $connection;
-    } catch (PDOException $exception) {
+    } catch (Throwable $exception) {
         error_log('Guardian Vault database connection failed: ' . $exception->getMessage());
         http_response_code(500);
         exit('The application is temporarily unavailable.');

@@ -28,6 +28,8 @@ The application permits the XAMPP `root`/blank-password defaults only when the r
 Changed PHP pages send no-store headers, and CSS/JS assets include file-version query strings so cPanel/browser caches do not keep serving old page styling after upload.
 If cPanel still shows old PHP after upload, use cPanel's "Restart PHP-FPM" or "MultiPHP Manager" reload option for the domain.
 
+If the live site says "The application is temporarily unavailable.", set `GUARDIAN_DEPLOYMENT_CHECK` to `'1'` in `config.php`, visit `/deployment-check.php`, then set it back to `'0'`. That page checks whether PHP can read `config.php`, whether PDO MySQL is enabled, and whether the database connection works.
+
 ## Database
 
 For an existing installation, back up the database and apply migrations in numeric order:
