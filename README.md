@@ -30,6 +30,8 @@ If cPanel still shows old PHP after upload, use cPanel's "Restart PHP-FPM" or "M
 
 If the live site says "The application is temporarily unavailable.", set `GUARDIAN_DEPLOYMENT_CHECK` to `'1'` in `config.php`, visit `/deployment-check.php`, then set it back to `'0'`. That page checks whether PHP can read `config.php`, whether PDO MySQL is enabled, and whether the database connection works.
 
+For MySQL driver code `1045`, reset the database user's password in cPanel, assign that user to the database, grant all privileges, and use the full prefixed cPanel names in `config.php`, such as `accountname_database` and `accountname_dbuser`.
+
 ## Database
 
 For an existing installation, back up the database and apply migrations in numeric order:

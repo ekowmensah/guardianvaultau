@@ -13,11 +13,11 @@ function app_environment(): string
 function app_key(): string
 {
     $key = (string) guardian_config_value('GUARDIAN_APP_KEY', '');
+    if (app_environment() === 'production' && ($key === '' || strlen($key) < 32 || str_contains($key, 'replace-with-'))) {
+        throw new RuntimeException('GUARDIAN_APP_KEY must be set to a random value of at least 32 characters in production.');
+    }
     if ($key !== '') {
         return $key;
-    }
-    if (app_environment() === 'production') {
-        throw new RuntimeException('GUARDIAN_APP_KEY is required in production.');
     }
     return hash('sha256', __DIR__ . '|guardian-vault-local-development-key');
 }
